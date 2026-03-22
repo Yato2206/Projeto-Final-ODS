@@ -1,0 +1,4 @@
+package jdbc
+
+class RepositoryDataJdbc {
+}
