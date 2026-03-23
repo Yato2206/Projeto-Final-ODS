@@ -15,8 +15,8 @@ CREATE TABLE dbo.ods
 CREATE TABLE dbo.data
 (
     id                  SERIAL PRIMARY KEY,
-    ods_id              INT                 DEFAULT NULL REFERENCES dbo.ods (id) ON DELETE SET NULL,
-    type                VARCHAR(255)        NOT NULL,
+    ods_id              INT[]               DEFAULT NULL REFERENCES dbo.ods (id) ON DELETE SET NULL,
+    type                VARCHAR(255)        NOT NULL DEFAULT 'UNDEFINED' check (type IN ('UNDEFINED', 'ACAO_NA_SOCIEDAD', 'ARTISTICO', 'CIENTIFICO', 'ENSINO')),
     origin              VARCHAR(512)        NOT NULL,
     date_checked        TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
 );
@@ -32,7 +32,7 @@ CREATE TABLE dbo.terms
 );
 
 -- Join table: dados_ods
-CREATE TABLE dbo.dados_ods
+CREATE TABLE dbo.data_ods
 (
     data_id INT NOT NULL REFERENCES dbo.data (id) ON DELETE CASCADE,
     ods_id  INT NOT NULL REFERENCES dbo.ods (id) ON DELETE CASCADE,

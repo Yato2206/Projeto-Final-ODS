@@ -86,7 +86,7 @@ class DomainTest {
     @Test
     fun `test invalid Terms (ID)`() {
         try {
-            Terms(-1, listOf(1), "Name", "Origin")
+            Terms(-1, 0, "Name", "Origin")
         } catch (e: IllegalArgumentException) {
             assertEquals("Terms ID must be greater than or equal to zero.", e.message)
         }
@@ -95,16 +95,16 @@ class DomainTest {
     @Test
     fun `test invalid Terms (odsID)`() {
         try {
-            Terms(1, emptyList(), "Name", "Origin")
+            Terms(1, -1, "Name", "Origin")
         } catch (e: IllegalArgumentException) {
-            assertEquals("ODS ID list must not be empty.", e.message)
+            assertEquals("ODS ID must be greater than or equal to zero.", e.message)
         }
     }
 
     @Test
     fun `test invalid Terms (name)`() {
         try {
-            Terms(1, listOf(1), "", "Origin")
+            Terms(1, 0, "", "Origin")
         } catch (e: IllegalArgumentException) {
             assertEquals("Name must not be blank.", e.message)
         }
@@ -113,7 +113,7 @@ class DomainTest {
     @Test
     fun `test invalid Terms (origin)`() {
         try {
-            Terms(1, listOf(1), "Name", "")
+            Terms(1, 0, "Name", "")
         } catch (e: IllegalArgumentException) {
             assertEquals("Origin must not be blank.", e.message)
         }
@@ -123,7 +123,7 @@ class DomainTest {
     fun `create a valid Terms`() {
         var success = false
         try {
-            Terms(1, listOf(1), "Valid Name", "Valid Origin")
+            Terms(1, 0, "Valid Name", "Valid Origin")
             success = true
         } finally {
             assert(success) { "Failed to create a valid Terms instance." }

@@ -30,11 +30,11 @@ class RepositoryDataInMem: RepositoryData {
     override fun getOds(data: Data): List<Ods>? =
         data.odsId?.mapNotNull { id -> odsRepo.getById(id) }
 
-    override fun getOrigin(data: Data): String = data.origin
+    override fun getOrigin(dataId: Int): String = data.first { it.id == dataId }.origin
 
-    override fun getType(data: Data): DataType = data.type
+    override fun getType(dataId: Int): DataType = data.first { it.id == dataId }.type
 
-    override fun getDateChecked(data: Data): LocalDateTime = data.dateChecked
+    override fun getDateChecked(dataId: Int): LocalDateTime = data.first { it.id == dataId }.dateChecked
 
     override fun deleteById(id: Int): Boolean = data.removeIf { it.id == id }
 

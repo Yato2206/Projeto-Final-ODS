@@ -41,21 +41,38 @@ class RepositoryOdsJdbc (
     }
 
     override fun save(entity: Ods) {
-        TODO("Not yet implemented")
+        val sql =
+            """
+            UPDATE dbo.ods
+            SET name=?
+            WHERE id=?
+            """.trimIndent()
+        con.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, entity.name)
+            stmt.setInt(2, entity.id)
+            stmt.executeUpdate()
+        }
     }
 
-    override fun deleteById(id: Int): Boolean {
-        TODO("Not yet implemented")
-    }
+        override fun deleteById(id: Int): Boolean {
+            val sql = "DELETE FROM dbo.ods WHERE id=?"
+            con.prepareStatement(sql).use { stmt ->
+                stmt.setInt(1, id)
+                return stmt.executeUpdate() > 0
+            }
+        }
 
-    override fun clear() {
-        TODO("Not yet implemented")
-    }
+        override fun clear() {
+            val sql = "TRUNCATE dbo.ods CASCADE"
+            con.prepareStatement(sql).use { stmt ->
+                stmt.executeUpdate()
+            }
+        }
 
-    private fun mapRowToOds(rs: ResultSet): Ods {
-        return Ods(
-            id = rs.getInt("id"),
-            name = rs.getString("name"),
-        )
+        private fun mapRowToOds(rs: ResultSet): Ods {
+            return Ods(
+                id = rs.getInt("id"),
+                name = rs.getString("name"),
+            )
+        }
     }
-}
