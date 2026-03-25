@@ -2,7 +2,7 @@ import java.time.LocalDateTime
 
 data class Data(
     val id: Int,
-    val odsId: List<Int>? = null,
+    val odsId: List<Int> = emptyList(),
     val type: DataType = DataType.UNDEFINED,
     val origin: String,
     val dateChecked: LocalDateTime,

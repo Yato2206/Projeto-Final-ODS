@@ -14,7 +14,7 @@ class RepositoryTermsInMem: RepositoryTerms {
         Terms(5, 1, "malnutrition", "Universidade de Toronto"),
         Terms(6, 2, "well being", "Universidade de Toronto"),
         Terms(7, 2, "holism", "Universidade de Toronto"),
-        Terms(8, 2, "epidemics", "Universidade de Toronto"),
+        Terms(8, 2, "epidemics", "Universidade de Toronto")
     )
 
     override fun getById(id: Int): Terms? = terms.find { it.id == id }

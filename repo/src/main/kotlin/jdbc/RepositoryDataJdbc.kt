@@ -13,13 +13,13 @@ import kotlin.use
 class RepositoryDataJdbc(
     private val con: Connection,
 ): RepositoryData {
-    override fun getOds(data: Data): List<Ods>? {
+    override fun getOds(data: Data): List<Ods> {
         val sql = "SELECT ods_id FROM dbo.data WHERE id=?"
         con.prepareStatement(sql).use { stmt ->
             stmt.executeQuery().use { rs ->
                 val result = mutableListOf<Ods>()
                 while (rs.next()) result.add(mapRowToOds(rs))
-                return result.ifEmpty { null }
+                return result
             }
         }
     }

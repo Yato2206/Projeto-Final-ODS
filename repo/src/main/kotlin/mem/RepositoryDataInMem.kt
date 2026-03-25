@@ -10,12 +10,15 @@ class RepositoryDataInMem: RepositoryData {
 
     private val odsRepo = RepositoryOdsInMem()
 
+    // Deterministic timestamp so tests don't depend on the current clock.
+    private val fixedDateChecked: LocalDateTime = LocalDateTime.of(2026, 3, 25, 0, 0)
+
     private val data = mutableListOf<Data>(
-        Data(id = 1, odsId = listOf(1), type = DataType.ARTISTICO, origin = "Origin1", dateChecked = LocalDateTime.now()),
-        Data(id = 2, odsId = listOf(3, 17), type = DataType.CIENTIFICO, origin = "Origin2", dateChecked = LocalDateTime.now()),
-        Data(id = 3, odsId = listOf(5, 6, 7), type = DataType.ACAO_NA_SOCIEDADE, origin = "Origin1", dateChecked = LocalDateTime.now()),
-        Data(id = 4, odsId = listOf(6, 13), type = DataType.ARTISTICO, origin = "Origin4", dateChecked = LocalDateTime.now()),
-        Data(id = 5, odsId = listOf(4, 8, 11), type = DataType.ENSINO, origin = "Origin5", dateChecked = LocalDateTime.now()),
+        Data(id = 0, odsId = listOf(1), type = DataType.ARTISTICO, origin = "Origin1", dateChecked = fixedDateChecked),
+        Data(id = 1, odsId = listOf(3, 17), type = DataType.CIENTIFICO, origin = "Origin2", dateChecked = fixedDateChecked),
+        Data(id = 2, odsId = listOf(5, 6, 7), type = DataType.ACAO_NA_SOCIEDADE, origin = "Origin1", dateChecked = fixedDateChecked),
+        Data(id = 3, odsId = listOf(), type = DataType.ARTISTICO, origin = "Origin4", dateChecked = fixedDateChecked),
+        Data(id = 4, odsId = listOf(4, 8, 11), type = DataType.ENSINO, origin = "Origin5", dateChecked = fixedDateChecked),
     )
 
     override fun getById(id: Int): Data? = data.find { it.id == id }
@@ -27,8 +30,8 @@ class RepositoryDataInMem: RepositoryData {
         data.add(entity)
     }
 
-    override fun getOds(data: Data): List<Ods>? =
-        data.odsId?.mapNotNull { id -> odsRepo.getById(id) }
+    override fun getOds(data: Data): List<Ods> =
+        data.odsId.mapNotNull { id -> odsRepo.getById(id) }
 
     override fun getOrigin(dataId: Int): String = data.first { it.id == dataId }.origin
 

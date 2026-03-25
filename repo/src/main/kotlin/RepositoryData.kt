@@ -1,7 +1,7 @@
 import java.time.LocalDateTime
 
 interface RepositoryData: Repository<Data> {
-    fun getOds(data: Data): List<Ods>?
+    fun getOds(data: Data): List<Ods>
     fun getOrigin(dataId: Int): String
     fun getType(dataId: Int): DataType
     fun getDateChecked(dataId: Int): LocalDateTime
