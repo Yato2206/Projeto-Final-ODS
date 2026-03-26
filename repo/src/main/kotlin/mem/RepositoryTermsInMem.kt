@@ -23,6 +23,8 @@ class RepositoryTermsInMem: RepositoryTerms {
 
     override fun getAllTerms(ods: Ods): List<Terms> = terms.filter {it.odsId == ods.id}
 
+    override fun createTerm(odsId: Int, name: String, origin: String): Terms = Terms(id = terms.size + 1 , odsId = odsId , name = name, origin = origin)
+
     override fun findByName(name: String): Terms? = terms.find { it.name == name }
 
     override fun save(entity: Terms) {

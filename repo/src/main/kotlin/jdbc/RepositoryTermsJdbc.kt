@@ -32,6 +32,27 @@ class RepositoryTermsJdbc (
         }
     }
 
+    override fun createTerm(odsId: Int, name: String, origin: String): Terms {
+        val sql = "INSERT INTO dbo.terms (ods_id, name, origin) VALUES (?, ?, ?) RETURNING id"
+        con.prepareStatement(sql).use { stmt ->
+            stmt.setInt(1, odsId)
+            stmt.setString(2, name)
+            stmt.setString(3, origin)
+            stmt.executeQuery().use { rs ->
+                return if (rs.next())
+                    Terms(
+                        id = rs.getInt("id"),
+                        odsId = odsId,
+                        name = name,
+                        origin = origin
+                    )
+                else {
+                    throw RuntimeException("Failed to insert term")
+                }
+            }
+        }
+    }
+
     override fun getById(id: Int): Terms? {
         val sql = "SELECT * FROM dbo.terms WHERE id = ?"
         con.prepareStatement(sql).use { stmt ->

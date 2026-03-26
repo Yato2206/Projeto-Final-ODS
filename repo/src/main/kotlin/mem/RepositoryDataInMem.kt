@@ -30,6 +30,8 @@ class RepositoryDataInMem: RepositoryData {
         data.add(entity)
     }
 
+    override fun createData(origin: String, dateChecked: LocalDateTime): Data = Data(id = data.size + 1, origin = origin, dateChecked = dateChecked).also { data.add(it) }
+
     override fun getOds(data: Data): List<Ods> =
         data.odsId.mapNotNull { id -> odsRepo.getById(id) }
 

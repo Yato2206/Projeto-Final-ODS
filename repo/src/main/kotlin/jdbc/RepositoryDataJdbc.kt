@@ -13,6 +13,26 @@ import kotlin.use
 class RepositoryDataJdbc(
     private val con: Connection,
 ): RepositoryData {
+
+    override fun createData(origin: String, dateChecked: LocalDateTime): Data {
+        val sql = "INSERT INTO dbo.data (origin, date_checked) VALUES (?, ?) RETURNING id"
+        con.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, origin)
+            stmt.setTimestamp(2, Timestamp.valueOf(dateChecked))
+            stmt.executeQuery().use { rs ->
+                return if (rs.next())
+                    Data(
+                        id = rs.getInt("id"),
+                        origin = origin,
+                        dateChecked = dateChecked
+                    )
+                else {
+                    throw RuntimeException("Failed to insert data")
+                }
+            }
+        }
+    }
+
     override fun getOds(data: Data): List<Ods> {
         val sql = "SELECT ods_id FROM dbo.data WHERE id=?"
         con.prepareStatement(sql).use { stmt ->

@@ -19,6 +19,23 @@ class RepositoryOdsJdbc (
         }
     }
 
+    override fun createOds(name: String): Ods {
+        val sql = "INSERT INTO dbo.ods (name) VALUES (?) RETURNING id"
+        con.prepareStatement(sql).use { stmt ->
+            stmt.setString(1, name)
+            stmt.executeQuery().use { rs ->
+                return if (rs.next())
+                    Ods(
+                        id = rs.getInt("id"),
+                        name = name
+                    )
+                else {
+                    throw RuntimeException("Failed to insert ODS")
+                }
+            }
+        }
+    }
+
     override fun getById(id: Int): Ods? {
         val sql = "SELECT * FROM dbo.ods WHERE id = ?"
         con.prepareStatement(sql).use { stmt ->
