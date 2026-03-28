@@ -23,6 +23,11 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    mainClass.set("pt.isel.ps.AppOdsToolKt")
+}
+
 kotlin {
     jvmToolchain(21)
 }
