@@ -8,17 +8,17 @@ CREATE SCHEMA dbo;
 CREATE TABLE dbo.ods
 (
     id                  SERIAL PRIMARY KEY,
-    name                VARCHAR(255)        NOT NULL,
+    name                VARCHAR(255)        NOT NULL
 );
 
 -- Tabela de Dados
 CREATE TABLE dbo.data
 (
     id                  SERIAL PRIMARY KEY,
-    ods_id              INT[]               DEFAULT NULL REFERENCES dbo.ods (id) ON DELETE SET NULL,
+    ods_id              INT[]               DEFAULT NULL,
     type                VARCHAR(255)        NOT NULL DEFAULT 'UNDEFINED' check (type IN ('UNDEFINED', 'ACAO_NA_SOCIEDAD', 'ARTISTICO', 'CIENTIFICO', 'ENSINO')),
     origin              VARCHAR(512)        NOT NULL,
-    date_checked        TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    date_checked        TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabela da Família de Palavras (Weak Entity of ODS)

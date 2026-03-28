@@ -21,9 +21,9 @@ class RepositoryTermsInMem: RepositoryTerms {
 
     override fun getAll(): List<Terms> = terms.toList()
 
-    override fun getAllTerms(ods: Ods): List<Terms> = terms.filter {it.odsId == ods.id}
+    override fun getAllOdsTerms(odsId: Int): List<Terms> = terms.filter {it.odsId == odsId}
 
-    override fun createTerm(odsId: Int, name: String, origin: String): Terms = Terms(id = terms.size + 1 , odsId = odsId , name = name, origin = origin)
+    override fun createTerm(odsId: Int, name: String, origin: String): Terms = Terms(id = terms.size, odsId = odsId , name = name, origin = origin)
 
     override fun findByName(name: String): Terms? = terms.find { it.name == name }
 

@@ -28,7 +28,7 @@ class RepositoryOdsInMem: RepositoryOds {
 
     override fun findByName(name: String): Ods? = ods.find { it.name == name }
 
-    override fun createOds(name: String): Ods = Ods(id = ods.size + 1 , name = name).also{ ods.add(it) }
+    override fun createOds(name: String): Ods = Ods(id = ods.size , name = name).also{ ods.add(it) }
 
     override fun getAll(): List<Ods> = ods.toList()
 

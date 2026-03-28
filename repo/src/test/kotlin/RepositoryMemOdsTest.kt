@@ -13,6 +13,12 @@ class RepositoryMemOdsTest {
         }
 
     @Test
+    fun `create a ODS`() {
+        val create = repo.createOds("Teste")
+        assertEquals(Ods(17, "Teste"), create)
+    }
+
+    @Test
     fun `get a ODS by ID`() {
         val found = repo.getById(0)
         assertEquals(Ods(0, "Erradicação da Pobreza"), found)

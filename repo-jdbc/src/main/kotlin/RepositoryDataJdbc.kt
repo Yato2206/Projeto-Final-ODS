@@ -33,43 +33,52 @@ class RepositoryDataJdbc(
         }
     }
 
-    override fun getOds(data: Data): List<Ods> {
-        val sql = "SELECT ods_id FROM dbo.data WHERE id=?"
+    override fun getOds(dataId: Int): List<Ods> {
+        val sql = """
+            SELECT o.id, o.name
+            FROM dbo.data_ods dataods
+            JOIN dbo.ods o ON o.id = dataods.ods_id
+            WHERE dataods.data_id = ?
+            ORDER BY o.id
+        """.trimIndent()
         con.prepareStatement(sql).use { stmt ->
+            stmt.setInt(1, dataId)
             stmt.executeQuery().use { rs ->
                 val result = mutableListOf<Ods>()
-                while (rs.next()) result.add(mapRowToOds(rs))
+                while (rs.next()) {
+                    result.add(mapRowToOds(rs))
+                }
                 return result
             }
         }
     }
 
-    override fun getOrigin(dataId: Int): String {
+    override fun getOrigin(dataId: Int): String? {
         val sql = "SELECT origin FROM dbo.data WHERE id =?"
         con.prepareStatement(sql).use { stmt ->
             stmt.setInt(1, dataId)
             stmt.executeQuery().use { rs ->
-                return rs.getString("origin")
+                return if (rs.next()) rs.getString("origin") else null
             }
         }
     }
 
-    override fun getType(dataId: Int): DataType {
+    override fun getType(dataId: Int): DataType? {
         val sql = "SELECT type FROM dbo.data WHERE id=?"
         con.prepareStatement(sql).use { stmt ->
             stmt.setInt(1, dataId)
             stmt.executeQuery().use { rs ->
-                return DataType.valueOf(rs.getString("type"))
+                return if(rs.next()) DataType.valueOf(rs.getString("type")) else null
             }
         }
     }
 
-    override fun getDateChecked(dataId: Int): LocalDateTime {
+    override fun getDateChecked(dataId: Int): LocalDateTime? {
         val sql = "SELECT date_checked FROM dbo.data WHERE id=?"
         con.prepareStatement(sql).use { stmt ->
             stmt.setInt(1, dataId)
             stmt.executeQuery().use { rs ->
-                return rs.getTimestamp("date_checked").toLocalDateTime()
+                return if(rs.next()) rs.getTimestamp("date_checked").toLocalDateTime() else null
             }
         }
     }
@@ -103,11 +112,30 @@ class RepositoryDataJdbc(
             WHERE id=?
             """.trimIndent()
         con.prepareStatement(sql).use { stmt ->
-            stmt.setObject(1, entity.odsId)
-            stmt.setObject(2, entity.type)
+            if (entity.odsId.isEmpty()) {
+                stmt.setNull(1, java.sql.Types.ARRAY)
+            } else {
+                val arr = con.createArrayOf("int4", entity.odsId.toTypedArray())
+                try {
+                    stmt.setArray(1, arr)
+                } finally {
+                    arr.free()
+                }
+            }
+            stmt.setString(2, entity.type.name)
             stmt.setTimestamp(3, Timestamp.valueOf(entity.dateChecked))
+            stmt.setInt(4, entity.id)
             stmt.executeUpdate()
         }
+
+       /* // Keep join-table in sync as well (schema defines dbo.data_ods).
+        // Delete then insert ensures stale relations are removed.
+        val deleteSql = "DELETE FROM dbo.data_ods WHERE data_id = ?"
+        con.prepareStatement(deleteSql).use { stmt ->
+            stmt.setInt(1, entity.id)
+            stmt.executeUpdate()
+        }*/
+
         if (!entity.odsId.isNullOrEmpty()) {
             val dataOdsSql = """
                 INSERT INTO dbo.data_ods (data_id, ods_id) 
@@ -118,7 +146,9 @@ class RepositoryDataJdbc(
                 for (ods in entity.odsId) {
                     stmt.setInt(1, entity.id)
                     stmt.setInt(2, ods)
+                    stmt.addBatch()
                 }
+                stmt.executeBatch()
             }
         }
     }

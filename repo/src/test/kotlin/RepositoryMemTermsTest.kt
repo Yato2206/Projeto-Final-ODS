@@ -13,6 +13,12 @@ class RepositoryMemTermsTest {
     }
 
     @Test
+    fun `create a Term` () {
+        val create = repo.createTerm(0, "test term", "Universidade de Toronto")
+        assertEquals(Terms(9, 0, "test term", "Universidade de Toronto"), create)
+    }
+
+    @Test
     fun `get Term by ID` () {
         val found = repo.getById(1)
         assertEquals(Terms(1, 0, "homeless", "Universidade de Toronto"), found)
@@ -37,7 +43,7 @@ class RepositoryMemTermsTest {
     }
 
     @Test
-    fun `get all Terms`() {
+    fun `getAll Terms`() {
         val found = repo.getAll()
         val termsList = listOf<Terms>(
             Terms(0, 0, "poverty", "Universidade de Toronto"),
@@ -55,9 +61,9 @@ class RepositoryMemTermsTest {
     }
 
     @Test
-    fun `get all Terms by ODS`() {
+    fun `getAllOdsTerms of a given ODS`() {
         val ods = Ods(1, "Fome Zero")
-        val found = repo.getAllTerms(ods)
+        val found = repo.getAllOdsTerms(ods.id)
         val termsList = listOf<Terms>(
             Terms(3, 1, "agriculture", "Universidade de Toronto"),
             Terms(4, 1, "nutrition", "Universidade de Toronto"),

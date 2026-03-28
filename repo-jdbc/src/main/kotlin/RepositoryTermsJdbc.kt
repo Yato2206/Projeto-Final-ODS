@@ -20,10 +20,10 @@ class RepositoryTermsJdbc (
         }
     }
 
-    override fun getAllTerms(ods: Ods): List<Terms> {
+    override fun getAllOdsTerms(odsId: Int): List<Terms> {
         val sql = "SELECT * FROM dbo.terms WHERE ods_id = ?"
         con.prepareStatement(sql).use { stmt ->
-            stmt.setInt(1, ods.id)
+            stmt.setInt(1, odsId)
             stmt.executeQuery().use { rs ->
                 val result = mutableListOf<Terms>()
                 while (rs.next()) result.add(mapRowToTerms(rs))
@@ -47,7 +47,7 @@ class RepositoryTermsJdbc (
                         origin = origin
                     )
                 else {
-                    throw RuntimeException("Failed to insert term")
+                    throw RuntimeException("Failed to insert Term")
                 }
             }
         }
@@ -82,8 +82,10 @@ class RepositoryTermsJdbc (
             WHERE id=?
             """.trimIndent()
         con.prepareStatement(sql).use { stmt ->
-            stmt.setString(1, entity.name)
-            stmt.setInt(2, entity.id)
+            stmt.setInt(1, entity.odsId)
+            stmt.setString(2, entity.name)
+            stmt.setString(3, entity.origin)
+            stmt.setInt(4, entity.id)
 
             stmt.executeUpdate()
         }
@@ -107,7 +109,7 @@ class RepositoryTermsJdbc (
     private fun mapRowToTerms(rs: ResultSet): Terms {
         return Terms(
             id = rs.getInt("id"),
-            odsId = rs.getInt("odsId"),
+            odsId = rs.getInt("ods_Id"),
             name = rs.getString("name"),
             origin = rs.getString("origin"),
         )

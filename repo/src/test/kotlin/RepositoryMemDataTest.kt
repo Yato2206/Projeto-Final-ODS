@@ -17,6 +17,12 @@ class RepositoryMemDataTest {
     }
 
     @Test
+    fun `create a Data`() {
+        val create = repo.createData("OriginTest", fixedDate)
+        assertEquals(Data(id = 5, odsId = listOf(), type = DataType.UNDEFINED, origin = "OriginTest", dateChecked = fixedDate), create)
+    }
+
+    @Test
     fun `get a Data by ID`() {
         val found = repo.getById(0)
         assertEquals(Data(id = 0, odsId = listOf(1), type = DataType.ARTISTICO, origin = "Origin1", dateChecked = fixedDate), found)
@@ -54,7 +60,7 @@ class RepositoryMemDataTest {
     fun `getOds returns the list of ODS associated with the Data`() {
         val foundData = repo.getById(0)
         assertNotNull(foundData)
-        val foundOds = repo.getOds(foundData)
+        val foundOds = repo.getOds(foundData.id)
         assertEquals(listOf(Ods(1, "Fome Zero")), foundOds)
     }
 
@@ -62,7 +68,7 @@ class RepositoryMemDataTest {
     fun `getOds returns an empty list due to no ODS associated with the Data`() {
         val foundData = repo.getById(3)
         assertNotNull(foundData)
-        val foundOds = repo.getOds(foundData)
+        val foundOds = repo.getOds(foundData.id)
         assertEquals(0, foundOds.size)
         assertEquals(emptyList<Ods>(), foundOds)
     }
@@ -74,15 +80,33 @@ class RepositoryMemDataTest {
     }
 
     @Test
+    fun `getOrigin returns null due to Data inexistent`() {
+        val found = repo.getOrigin(15)
+        assertNull(found)
+    }
+
+    @Test
     fun `getType returns the dataType of a Data`() {
         val found = repo.getType(0)
         assertEquals(DataType.ARTISTICO, found)
     }
 
     @Test
+    fun `getType returns null due to Data inexistent`() {
+        val found = repo.getType(15)
+        assertNull(found)
+    }
+
+    @Test
     fun `getDateChecked returns the date checked of a Data`() {
         val found = repo.getDateChecked(0)
         assertEquals(fixedDate, found)
+    }
+
+    @Test
+    fun `getDateChecked returns null due to Data inexistent`() {
+        val found = repo.getDateChecked(15)
+        assertNull(found)
     }
 
     @Test

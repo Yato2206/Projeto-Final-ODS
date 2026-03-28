@@ -30,16 +30,19 @@ class RepositoryDataInMem: RepositoryData {
         data.add(entity)
     }
 
-    override fun createData(origin: String, dateChecked: LocalDateTime): Data = Data(id = data.size + 1, origin = origin, dateChecked = dateChecked).also { data.add(it) }
+    override fun createData(origin: String, dateChecked: LocalDateTime): Data = Data(id = data.size, origin = origin, dateChecked = dateChecked).also { data.add(it) }
 
-    override fun getOds(data: Data): List<Ods> =
-        data.odsId.mapNotNull { id -> odsRepo.getById(id) }
+    override fun getOds(dataId: Int): List<Ods> =
+        getById(dataId)
+            ?.odsId
+            ?.mapNotNull { odsRepo.getById(it) }
+            ?: emptyList()
 
-    override fun getOrigin(dataId: Int): String = data.first { it.id == dataId }.origin
+    override fun getOrigin(dataId: Int): String? = data.find { it.id == dataId }?.origin
 
-    override fun getType(dataId: Int): DataType = data.first { it.id == dataId }.type
+    override fun getType(dataId: Int): DataType? = data.find { it.id == dataId }?.type
 
-    override fun getDateChecked(dataId: Int): LocalDateTime = data.first { it.id == dataId }.dateChecked
+    override fun getDateChecked(dataId: Int): LocalDateTime? = data.find { it.id == dataId }?.dateChecked
 
     override fun deleteById(id: Int): Boolean = data.removeIf { it.id == id }
 
