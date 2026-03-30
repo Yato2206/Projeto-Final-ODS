@@ -13,3 +13,4 @@ include("repo")
 
 include("untitled")
 include("repo-jdbc")
+include("scrapper")
