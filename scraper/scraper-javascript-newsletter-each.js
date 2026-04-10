@@ -16,8 +16,8 @@ const news = {}
 async function scrapeAll() {
     const currentDate = new Date();
 
-    //for (const baseUrl of baseUrls) {
-    for(let i = 0; i < 1; i++) {
+    for (const baseUrl of baseUrls) {
+    //for(let i = 0; i < 1; i++) {
         const response = await fetch(baseUrl);
         const html = await response.text();
         const url = new URL(baseUrl);
@@ -38,15 +38,15 @@ async function scrapeAll() {
                 .find(".title-body p")
                 .text()
                 .trim()
-            const href = $(element)
+            /*const href = $(element)
                 .find(".title-body a")
                 .attr("href");
-            console.log("Href found:", href, href.length);
+            console.log("Href found:", href, href.length);*/
 
-            let link
+            /*let link
             if(href) {
                 link = new URL(href, "https://www.ipl.pt").href
-            } else link = "No links found";
+            } else link = "No links found";*/
             const campoAberto = [];
 
             const container = $(element).find(".field--name-field-campo-aberto-grupo-3");
@@ -61,33 +61,19 @@ async function scrapeAll() {
                     .get()
                     .join(" ");
 
-                const hrefCa = $(el)
+                /*const hrefCa = $(el)
                     .find("a")
-                    .attr("href");
+                    .attr("href");*/
                 //console.log("Campo Aberto Href found:", hrefCa);
 
-                const linkCa = new URL(hrefCa, "https://www.ipl.pt").href;
+                //const linkCa = new URL(hrefCa, "https://www.ipl.pt").href;
 
                 campoAberto.push({
                     titulo: titulo,
                     texto: texto,
-                    link: linkCa
+                    //link: linkCa
                 });
             });
-
-            //console.log(campoAberto);
-
-            //console.log(campoAberto);
-            /*const campoAbertoTitulo  = $(element)
-                .find(".field.field--name-field-campo-aberto-grupo-3 h2")
-                .text()
-                .trim()
-            console.log("Campo Aberto Título:", campoAbertoTitulo, campoAbertoTitulo.length)
-            const campoAbertoTexto = $(element)
-                .find(".field--name-field-campo-aberto-grupo-3 p")
-                .text()
-                .trim()
-            console.log("Campo Aberto Texto:", campoAbertoTexto, campoAbertoTexto.length)*/
             /*
 
         //const link = new URL()
@@ -95,11 +81,8 @@ async function scrapeAll() {
             news[titulo] = {
                 politecnicoTitulo: politecnicoTitulo,
                 politecnicoTexto: politecnicoTexto,
-                links: link,
+                //links: link,
                 noticias: campoAberto,
-                //campoAbertoTitulo: campoAbertoTitulo,
-                //campoAbertoTexto: campoAbertoTexto,
-                //text: text,
                 dateChecked: currentDate
             };
         });
