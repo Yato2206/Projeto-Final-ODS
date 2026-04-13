@@ -1,118 +1,125 @@
-//const cheerio = require('cheerio');
-//const fs = require('fs');
-//const puppeteer = require('puppeteer');
+const { chromium } = require('playwright');
+const fs = require("fs");
 
-const baseUrl = 'https://repositorio.ipl.pt';
-
-const articles = {};
-
-import { chromium } from 'playwright';
 (async () => {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ headless: false });
     const page = await browser.newPage();
+    await page.goto('https://repositorio.ipl.pt');
+    const results = [];
+    let globalId = 0;
+    //const scrapped = [];
 
-    // Vai ao home
-    await page.goto(`${baseUrl}/home`);
+    while(true) {
+        const reviewsSelector = '.mt-4.mb-4.d-flex';
+        while (true) {
+            const buttonLoadMore = page.locator('button:has-text("Carregar mais ...")');
+            if (!(await buttonLoadMore.isVisible())) {
+                //console.log('Botão desapareceu. fim');
+                break;
+            }
 
-    // Espera requests carregarem
-    await page.waitForLoadState('networkidle');
+            const before = await page.locator(reviewsSelector).count();
 
-    // Intercepta cookies
-    const cookies = await page.context().cookies();
-    console.log("COOKIES:", cookies);
+            await buttonLoadMore.scrollIntoViewIfNeeded();
+            await buttonLoadMore.click();
 
-    // Agora podes clicar no botão ou chamar APIs internas
-    // await page.click('selector-do-botao');
+            //console.log('ANTES:', before);
+            await page.waitForTimeout(2000);
+            //console.log('DEPOIS:', await page.locator('.mt-4.mb-4.d-flex.ng-tns-c62-30.ng-star-inserted').count());
 
-    await browser.close();
-})();
-/*
-async function scrapeAll() {
-    const browser = await puppeteer.launch({headless: true});
-    const page = await browser.newPage();
-    await page.goto(baseUrl, {waitUntil: "networkidle2"});
-    await page.click("button.search-button");
-    //await page.waitForTimeout(3000);
-    await page.screenshot({path: "debug.png", fullPage: true});
-    await page.waitForSelector("ng-tns-c201-0", {timeout: 10000});
-    let pageNumber = 1; //obrigatorio comecar em 1. nao existe pagina com indice 0
-    //let hasMore = true;
+            await page.waitForFunction(
+                (selector, beforeCount) =>
+                    document.querySelectorAll(selector).length > beforeCount,
+                reviewsSelector,
+                before
+            ).catch(() => {});
+        }
 
-    const currentDate = new Date();
+        //const reviews = page.locator(reviewsSelector);
+        //const data = await reviews.evaluateAll(els => els.map(el => el.innerText) );
 
-    //while (hasMore) {
-        const url = `${baseUrl}/search?spc.page=${pageNumber}&spc.sf=dc.date.accessioned&spc.sd=DESC`;
-        const response = await fetch(url);
-        const html = await response.text();
-        const $ = cheerio.load(html);
+        const currentDate = new Date();
+        const data = await page.$$eval(reviewsSelector, (els, args) =>
+            els.map((el, idx) => ({
+                id: args.startId + idx,
+                titulo: el.querySelector('a')?.innerText.trim(),
+                autores: el.querySelector('.clamp-default-2 .item-list-authors')?.innerText.trim(),
+                dataPublicacao: el.querySelector('.tag_elements a')?.innerText.trim(),
+                texto: el.querySelector('.clamp-default-3 span')?.innerText.trim(),
+                tipo: el.querySelectorAll('.tag_elements a')?.[1]?.innerText.trim(),
+                acesso: el.querySelector('.access-status-list-element-badge a')?.innerText.trim(),
+                dataAcessada: args.currentDate
+            })),
+            {
+                startId: globalId,
+                currentDate: currentDate
+            }
+        );
+        globalId += data.length;
 
-        const items = $(".list-unstyled");
-        console.log(items.length);
-        //console.log(items)
-        /*
-        if (items.length === 0) {
-            hasMore = false;
+        //garantir que ele so da push quando faz um scrap novo, evitando duplicados por falta de load
+        const seen = new Set();
+        const newData = data.filter(item => {
+            if (seen.has(item.titulo)) return false;
+            seen.add(item.titulo);
+            return true;
+        });
+
+        results.push(...newData);
+        //console.log('Página capturada:', data.length)
+
+        const buttonNextPage = page.locator('.page-item:has-text("»")');
+        //console.log(buttonNextPage.count());
+        /*if (!(await buttonNextPage.isVisible()) || !(await buttonNextPage.isEnabled())) {
+            console.log('Fim da paginação');
+            break;
+        }*/
+        if (!await buttonNextPage.isVisible()) {
+            //console.log('Fim da paginação visible');
             break;
         }
 
+        if (!await buttonNextPage.isEnabled()) {
+            //console.log('Fim da paginação enabled');
+            break;
+        }
 
-        items.each((i, element) => {
-            const titulo = $(element)
-                .find(".ng-star-inserted a")
-                .text()
-                .trim();
+        //const firstBefore = await reviews.first().innerText();
 
-            if (!titulo) return;
+        const snapshotBefore = await page.$$eval(
+            reviewsSelector,
+            els => els.map(e => e.innerText).join('|')
+        );
 
-            const autores = $(element)
-                .find(".clamp-default-2")
-                .text()
-                .trim();
+        //await buttonNextPage.scrollIntoViewIfNeeded();
+        await buttonNextPage.click(); // esperar mudança real no DOM
 
-            const texto = $(element)
-                .find(".min-3 .clamp-default-none span")
-                .text()
-                .trim();
+        /*
+        await page.waitForFunction(
+            (selector, oldSnapshot) => {
+                const now = Array.from(document.querySelectorAll(selector))
+                    .map(e => e.innerText)
+                    .join('|');
 
-            const data = $(element)
-                .find(".tag_elements .ng-star-inserted a")
-                .text()
-                .trim();
+                return now !== oldSnapshot;
+            },
+            reviewsSelector,
+            snapshotBefore
+        );*/
+        await page.waitForFunction(
+            (selector) => {
+                const items = document.querySelectorAll(selector);
+                return items.length >= 10; // ou número esperado
+            },
+            reviewsSelector
+        );
+    }
+    //console.log('TOTAL:', results.length);
+    //console.log(results[30]);
+    //console.log(results[9]);
+    //if(results[11] !== null) console.log(results[11]);
 
-            const tipo = $(element)
-                .find(".tag_elements .ng-star-inserted a")
-                .text()
-                .trim();
-
-            const acesso = $(element)
-                .find(".tag_elements .access-status-list-element-badge a")
-                .text()
-                .trim();
-
-            const href = $(element)
-                .find(".ng-star-inserted a")
-                .attr("href");
-
-            const link = new URL(href, "https://repositorio.ipl.pt").href;
-
-            articles[titulo] = {
-                autores: autores,
-                texto: texto,
-                dataDePublicacao: data,
-                tipo: tipo,
-                acesso: acesso,
-                link: link,
-                dateChecked: currentDate
-            };
-        });
-
-        console.log(`Scraped page ${pageNumber}`);
-        pageNumber++;
-    //}
-
-    fs.writeFileSync("repoCientifico.json", JSON.stringify(articles, null, 2));
+    await browser.close();
+    fs.writeFileSync("repoCientifico.json", JSON.stringify(results, null, 2));
     console.log("Repositorio Cientifico saved!");
-}
-
-scrapeAll().then(r => console.log("Scraping completed!")).catch(err => console.error("Error:", err));
-*/
+})();
