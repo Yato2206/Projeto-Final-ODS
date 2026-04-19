@@ -3,12 +3,12 @@ import pyscopg2
 
 # Estabelecer ligação com a base de dados
 conn = psycopg2.connect( #configurar isto direito
-    dbname="minha_db",
-    user="meu_user",
-    password="minha_pass",
+    dbname="postgres",
+    user="postgres",
+    password="iselPs123",
     host="localhost",
     port="5432"
-)# depois colcoar o nome correto da base de dados
+)# depois colocar o nome correto da base de dados
 cursor = conn.cursor()
 
 # Ler o ficheiro JSON
