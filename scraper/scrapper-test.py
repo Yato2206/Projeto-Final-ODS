@@ -130,57 +130,86 @@ def save_failed():
     with open("failed_or_missed_urls.json", "w", encoding="utf-8") as f:
         json.dump(failed_urls, f, indent=2)
 
+def extract_item_data(element, base_url):
+    """Extrai dados completos de um elemento"""
+    a = element.select_one('a')
+    if not a:
+        return None, None
+
+    rawA = a.get_text(strip=True)
+    titulo = re.split(r'\d{4}', rawA)[0].strip()
+
+    href = a.get('href')
+    link = urljoin("https://repositorio.ipl.pt", href) if href else None
+
+    if not link:
+        return None, None
+
+    tag_elements = element.select('.tag_elements a')
+
+    data = {
+        "titulo": titulo,
+        "colectionOrigin": base_url,
+        "autores": (
+            element.select_one('.clamp-default-2 .item-list-authors')
+            .get_text(strip=True)
+            if element.select_one('.clamp-default-2 .item-list-authors')
+            else ""
+        ),
+        "texto": (
+            element.select_one('.clamp-default-3 .content span')
+            .get_text(strip=True)
+            if element.select_one('.clamp-default-3 .content span')
+            else ""
+        ),
+        "dataPublicacao": tag_elements[0].get_text(strip=True) if len(tag_elements) > 0 else "",
+        "tipo": tag_elements[1].get_text(strip=True) if len(tag_elements) > 1 else "",
+        "acesso": (
+            element.select_one('.access-status-list-element-badge a')
+            .get_text(strip=True)
+            if element.select_one('.access-status-list-element-badge a')
+            else ""
+        ),
+        "dateChecked": datetime.now(timezone.utc).isoformat()
+    }
+
+    return link, data
+
 def parse_page(html, base_url, seen_links):
     soup = BeautifulSoup(html, 'html.parser')
     items = soup.select(".mt-4.mb-4.d-flex")
     news = {}
 
     for element in items:
-        a = element.select_one('a')
-        if not a:
-            continue
-
-        rawA = a.get_text(strip=True)
-        titulo = re.split(r'\d{4}', rawA)[0].strip()
-
-        href = a.get('href')
-        link = urljoin("https://repositorio.ipl.pt", href) if href else None
-
+        link, data = extract_item_data(element, base_url)
+        
         if not link or link in news:
             continue
         if link in seen_links:
             continue
         seen_links.add(link)
-
-        tag_elements = element.select('.tag_elements a')
-
-        news[link] = {
-            "titulo": titulo,
-            "colectionOrigin": base_url,
-            "autores": (
-                element.select_one('.clamp-default-2 .item-list-authors')
-                .get_text(strip=True)
-                if element.select_one('.clamp-default-2 .item-list-authors')
-                else ""
-            ),
-            "texto": (
-                element.select_one('.clamp-default-3 .content span')
-                .get_text(strip=True)
-                if element.select_one('.clamp-default-3 .content span')
-                else ""
-            ),
-            "dataPublicacao": tag_elements[0].get_text(strip=True) if len(tag_elements) > 0 else "",
-            "tipo": tag_elements[1].get_text(strip=True) if len(tag_elements) > 1 else "",
-            "acesso": (
-                element.select_one('.access-status-list-element-badge a')
-                .get_text(strip=True)
-                if element.select_one('.access-status-list-element-badge a')
-                else ""
-            ),
-            "dateChecked": datetime.now(timezone.utc).isoformat()
-        }
+        
+        news[link] = data
 
     return news
+
+async def scrape_item_details(session, item_link, base_url):
+    """Acede a um item individual e extrai dados completos via .row .entity-publication"""
+    html = await fetch(session, item_link)
+    if not html:
+        return {}
+    
+    soup = BeautifulSoup(html, 'html.parser')
+    detail_items = soup.select(".row .entity-publication")
+    details = {}
+    
+    for element in detail_items:
+        link, data = extract_item_data(element, base_url)
+        
+        if link and link not in details:
+            details[link] = data
+    
+    return details
 
 def clean_url(url):
     parts = urlsplit(url)
@@ -193,6 +222,9 @@ async def scrape_collection(session, base_url):
     consecutive_empty_pages = 0
     max_consecutive_empty = 1
     seen_links = set()
+    
+    # Detectar se é a coleção especial - Projetos
+    is_special_collection = "75734783-5a52-4f7c-9cb0-6831e738f280" in base_url
 
     while True:
         url = f"{base_url}?cp.page={page}"
@@ -227,6 +259,7 @@ async def scrape_collection(session, base_url):
                 break
             continue
 
+        # Sempre usar o seletor normal para extrair items
         items = BeautifulSoup(html, "html.parser").select(".mt-4.mb-4.d-flex")
 
         if len(items) == 0:
@@ -239,7 +272,29 @@ async def scrape_collection(session, base_url):
             continue
 
         consecutive_empty_pages = 0
-        news = parse_page(html, base_url, seen_links)
+        
+        # Usar função de parse apropriada
+        if is_special_collection:
+            # Para coleção especial (Projetos): scrape normal primeiro, depois acede a cada link
+            news = parse_page(html, base_url, seen_links)
+            
+            # Para cada link extraído, aceder a ele e fazer scrape com campos completos
+            # Fazer isso EM PARALELO com asyncio.gather
+            if news:
+                tasks = [scrape_item_details(session, link, base_url) for link in news.keys()]
+                detailed_results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                detailed_news = {}
+                for result in detailed_results:
+                    if isinstance(result, dict):
+                        detailed_news.update(result)
+                
+                print(f"  → {len(detailed_news)} items obtidos em paralelo")
+                news = detailed_news
+            else:
+                news = {}
+        else:
+            news = parse_page(html, base_url, seen_links)
 
         if len(items) > 0 and len(news) == 0:
             print(f"Página repetida, provavelmente cópia da última em {url}")
