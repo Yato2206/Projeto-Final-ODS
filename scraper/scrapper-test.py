@@ -9,13 +9,13 @@ import glob
 from pathlib import Path
 
 CONCURRENT_REQUESTS = 50
-CONCURRENT_SCRAPPES = 15
+CONCURRENT_SCRAPES = 10
 RETRIES = 3
 ITEMS_PER_FILE = 1000
 BATCH_SIZE = 100
 
 semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
-scrape_semaphore = asyncio.Semaphore(CONCURRENT_SCRAPPES)
+scrape_semaphore = asyncio.Semaphore(CONCURRENT_SCRAPES)
 failed_urls = {}
 current_file_index = 1
 items_in_current_file = 0
@@ -220,7 +220,7 @@ async def scrape_collection(session, base_url):
     page = 1
     batch = {}
     consecutive_empty_pages = 0
-    max_consecutive_empty = 1
+    max_consecutive_empty = 3  # Permite 3 erros consecutivos antes de parar
     seen_links = set()
     
     # Detectar se é a coleção especial - Projetos
@@ -301,7 +301,7 @@ async def scrape_collection(session, base_url):
             print(f"Total na página: {len(items)} | Novos: {len(news)} | {url}")
             print(f"Fim da coleção detectado → parando")
             break
-        print(f"Total na página: {len(items)} | Novos: {len(news)} | {url}")
+        print(f"Total na página: {len(items)} | Novos: {len(news)} | Tamanho batch: {len(batch)} | {url}")
 
         batch.update(news)
 
@@ -337,6 +337,8 @@ async def main():
             all_links = [item["link"] for item in data]
         else:
             all_links = list(data.keys())
+
+        print(f"  → Links no results_links.json: {len(all_links)}")
     except:
         print("Erro a carregar results_links.json")
         return
@@ -361,12 +363,12 @@ async def main():
 
     async with aiohttp.ClientSession() as session:
         if retry_links:
-            print(f"\n FASE 1: Retry dos {len(retry_links)} links falhados ({CONCURRENT_SCRAPPES} em paralelo)\n")
+            print(f"\n FASE 1: Retry dos {len(retry_links)} links falhados ({CONCURRENT_SCRAPES} em paralelo)\n")
             retry_tasks = [limited_scrape(session, url) for url in retry_links]
             await asyncio.gather(*retry_tasks, return_exceptions=True)
 
         if new_links:
-            print(f"\nFASE 2: Scrap dos {len(new_links)} links ({CONCURRENT_SCRAPPES} em paralelo)\n")
+            print(f"\nFASE 2: Scrap dos {len(new_links)} links ({CONCURRENT_SCRAPES} em paralelo)\n")
             new_tasks = [limited_scrape(session, url) for url in new_links]
             await asyncio.gather(*new_tasks, return_exceptions=True)
 
