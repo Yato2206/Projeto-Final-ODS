@@ -175,7 +175,11 @@ def extract_item_data(element, base_url):
 
     return link, data
 
-def parse_page(html, base_url, seen_links):
+def parse_page(html, base_url, seen_links, done_links=None):
+    """Parse página HTML e extrai items, evitando duplicados"""
+    if done_links is None:
+        done_links = set()
+
     soup = BeautifulSoup(html, 'html.parser')
     items = soup.select(".mt-4.mb-4.d-flex")
     news = {}
@@ -187,14 +191,19 @@ def parse_page(html, base_url, seen_links):
             continue
         if link in seen_links:
             continue
+        if link in done_links:  # Evitar re-scrape de links já existentes
+            continue
         seen_links.add(link)
         
         news[link] = data
 
     return news
 
-async def scrape_item_details(session, item_link, base_url):
+async def scrape_item_details(session, item_link, base_url, done_links=None):
     """Acede a um item individual e extrai dados completos via .row .entity-publication"""
+    if done_links is None:
+        done_links = set()
+
     html = await fetch(session, item_link)
     if not html:
         return {}
@@ -206,7 +215,7 @@ async def scrape_item_details(session, item_link, base_url):
     for element in detail_items:
         link, data = extract_item_data(element, base_url)
         
-        if link and link not in details:
+        if link and link not in details and link not in done_links:  # Evitar duplicados
             details[link] = data
     
     return details
@@ -215,19 +224,63 @@ def clean_url(url):
     parts = urlsplit(url)
     return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
 
-async def scrape_collection(session, base_url):
-    base_url = clean_url(base_url)
-    page = 1
+def has_page_parameter(url):
+    """Verifica se URL tem parâmetro cp.page"""
+    parts = urlsplit(url)
+    params = parts.query.split('&')
+    for param in params:
+        if param.startswith('cp.page='):
+            return True
+    return False
+
+def extract_page_parameter(url):
+    """Extrai o número da página de um URL"""
+    parts = urlsplit(url)
+    params = parts.query.split('&')
+    for param in params:
+        if param.startswith('cp.page='):
+            try:
+                return int(param.replace('cp.page=', ''))
+            except:
+                return None
+    return None
+
+async def scrape_collection(session, base_url, done_links=None, retry_mode=False):
+    """Scrape uma coleção, evitando links duplicados
+
+    Args:
+        session: aiohttp session
+        base_url: URL da coleção (com ou sem page parameter)
+        done_links: set de links já scrapeados
+        retry_mode: Se True, scrape apenas a página específica do URL (para retry)
+    """
+    if done_links is None:
+        done_links = set()
+
+    # Modo retry: preservar page parameter e fazer scrape apenas dessa página
+    if retry_mode and has_page_parameter(base_url):
+        parts = urlsplit(base_url)
+        base_url_clean = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        start_page = extract_page_parameter(base_url)
+        end_page = start_page
+        print(f"  → Modo RETRY: Scrapeando apenas página {start_page} do URL")
+    else:
+        # Modo normal: limpar URL e fazer scrape de todas as páginas
+        base_url_clean = clean_url(base_url)
+        start_page = 1
+        end_page = None  # Infinito, até encontrar fim
+
+    page = start_page
     batch = {}
     consecutive_empty_pages = 0
     max_consecutive_empty = 3  # Permite 3 erros consecutivos antes de parar
     seen_links = set()
     
     # Detectar se é a coleção especial - Projetos
-    is_special_collection = "75734783-5a52-4f7c-9cb0-6831e738f280" in base_url
+    is_special_collection = "75734783-5a52-4f7c-9cb0-6831e738f280" in base_url_clean
 
     while True:
-        url = f"{base_url}?cp.page={page}"
+        url = f"{base_url_clean}?cp.page={page}"
         print("A processar:", url)
 
         html = await fetch(session, url)
@@ -239,6 +292,9 @@ async def scrape_collection(session, base_url):
             if consecutive_empty_pages >= max_consecutive_empty:
                 print(f" {max_consecutive_empty} páginas consecutivas inacessíveis → fim")
                 break
+            # Se modo retry e atingimos end_page, sair
+            if retry_mode and end_page and page > end_page:
+                break
             continue
 
         if "alert alert-info" in html:
@@ -248,6 +304,9 @@ async def scrape_collection(session, base_url):
             if consecutive_empty_pages >= max_consecutive_empty:
                 print(f"{max_consecutive_empty} páginas vazias consecutivas → fim")
                 break
+            # Se modo retry e atingimos end_page, sair
+            if retry_mode and end_page and page > end_page:
+                break
             continue
 
         if "alert alert-danger" in html:
@@ -256,6 +315,9 @@ async def scrape_collection(session, base_url):
             consecutive_empty_pages += 1
             if consecutive_empty_pages >= max_consecutive_empty:
                 print(f"{max_consecutive_empty} páginas com erro consecutivas → fim")
+                break
+            # Se modo retry e atingimos end_page, sair
+            if retry_mode and end_page and page > end_page:
                 break
             continue
 
@@ -269,19 +331,22 @@ async def scrape_collection(session, base_url):
             if consecutive_empty_pages >= max_consecutive_empty:
                 print(f"{max_consecutive_empty} páginas vazias → fim da coleção")
                 break
+            # Se modo retry e atingimos end_page, sair
+            if retry_mode and end_page and page > end_page:
+                break
             continue
 
         consecutive_empty_pages = 0
         
-        # Usar função de parse apropriada
+        # Usar função de parse apropriada, passando done_links
         if is_special_collection:
             # Para coleção especial (Projetos): scrape normal primeiro, depois acede a cada link
-            news = parse_page(html, base_url, seen_links)
-            
+            news = parse_page(html, base_url_clean, seen_links, done_links)
+
             # Para cada link extraído, aceder a ele e fazer scrape com campos completos
             # Fazer isso EM PARALELO com asyncio.gather
             if news:
-                tasks = [scrape_item_details(session, link, base_url) for link in news.keys()]
+                tasks = [scrape_item_details(session, link, base_url_clean, done_links) for link in news.keys()]
                 detailed_results = await asyncio.gather(*tasks, return_exceptions=True)
                 
                 detailed_news = {}
@@ -294,7 +359,7 @@ async def scrape_collection(session, base_url):
             else:
                 news = {}
         else:
-            news = parse_page(html, base_url, seen_links)
+            news = parse_page(html, base_url_clean, seen_links, done_links)
 
         if len(items) > 0 and len(news) == 0:
             print(f"Página repetida, provavelmente cópia da última em {url}")
@@ -311,24 +376,42 @@ async def scrape_collection(session, base_url):
 
         page += 1
 
+        # Se modo retry e atingimos end_page, sair após processar a página
+        if retry_mode and end_page and page > end_page:
+            print(f"  → Fim da página solicitada (página {end_page})")
+            break
+
     if batch:
         await save_to_rotating_file(batch)
 
     return True
 
-async def limited_scrape(session, url):
+async def limited_scrape(session, url, done_links=None, retry_mode=False):
+    """Limita scrapes concorrentes com deduplicação
+
+    Args:
+        session: aiohttp session
+        url: URL da coleção
+        done_links: set de links já scrapeados
+        retry_mode: Se True, scrape apenas a página específica (para links falhados)
+    """
+    if done_links is None:
+        done_links = set()
     async with scrape_semaphore:
-        return await scrape_collection(session, url)
+        return await scrape_collection(session, url, done_links, retry_mode)
 
 async def main():
     global current_file_index
 
     current_file_index = get_current_file_index()
 
+    # PASSO 1: Carregar todos os links já scrapeados na memória
     done_links, total_existing = load_all_existing_data()
     print(f"Dados existentes: {total_existing} items em {len(glob.glob('repo_cientifico_*.json'))} ficheiros")
     print(f"Próximo ficheiro será: {get_data_filename(current_file_index)}")
+    print(f"Links já scrapeados: {len(done_links)}\n")
 
+    # PASSO 2: Carregar links de results_links.json
     try:
         with open("results_links.json", "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -338,23 +421,27 @@ async def main():
         else:
             all_links = list(data.keys())
 
-        print(f"  → Links no results_links.json: {len(all_links)}")
+        print(f"Links em results_links.json: {len(all_links)}")
     except:
         print("Erro a carregar results_links.json")
         return
 
+    # PASSO 3: Carregar failed_or_missed_urls.json
     try:
         with open("failed_or_missed_urls.json", "r") as f:
             failed = json.load(f)
     except:
         failed = {}
 
-    retry_links = list(failed.keys())
-    new_links = [url for url in all_links if url not in failed]
+    # PASSO 4: Filtrar links que já foram scrapeados
+    retry_links = [url for url in failed.keys() if url not in done_links]
+    new_links = [url for url in all_links if url not in done_links and url not in failed]
 
     print(f"\n{'='*100}")
-    print(f"Links para retry: {len(retry_links)}")
-    print(f"Links para processar: {len(new_links)}")
+    print(f"Links para retry (não scrapeados): {len(retry_links)}")
+    print(f"Links já scrapeados (ignorados): {len([url for url in failed.keys() if url in done_links])}")
+    print(f"Links novos para processar: {len(new_links)}")
+    print(f"Links já existentes (ignorados): {len([url for url in all_links if url in done_links])}")
     print(f"{'='*100}\n")
 
     if not retry_links and not new_links:
@@ -362,18 +449,32 @@ async def main():
         return
 
     async with aiohttp.ClientSession() as session:
+        # FASE 1: Retry dos links falhados (preservar page parameter)
         if retry_links:
-            print(f"\n FASE 1: Retry dos {len(retry_links)} links falhados ({CONCURRENT_SCRAPES} em paralelo)\n")
-            retry_tasks = [limited_scrape(session, url) for url in retry_links]
+            print(f"FASE 1: Retry dos {len(retry_links)} links falhados ({CONCURRENT_SCRAPES} em paralelo)\n")
+            retry_tasks = [limited_scrape(session, url, done_links, retry_mode=True) for url in retry_links]
             await asyncio.gather(*retry_tasks, return_exceptions=True)
 
+            # Remover links processados do ficheiro failed_or_missed_urls
+            for url in retry_links:
+                if url in failed:
+                    del failed[url]
+
+            # Guardar ficheiro atualizado
+            with open("failed_or_missed_urls.json", "w", encoding="utf-8") as f:
+                json.dump(failed, f, indent=2)
+            print(f"Ficheiro failed_or_missed_urls.json atualizado\n")
+
+        # FASE 2: Scrap dos novos links (modo normal)
         if new_links:
-            print(f"\nFASE 2: Scrap dos {len(new_links)} links ({CONCURRENT_SCRAPES} em paralelo)\n")
-            new_tasks = [limited_scrape(session, url) for url in new_links]
+            print(f"FASE 2: Scrap dos {len(new_links)} links novos ({CONCURRENT_SCRAPES} em paralelo)\n")
+            new_tasks = [limited_scrape(session, url, done_links, retry_mode=False) for url in new_links]
             await asyncio.gather(*new_tasks, return_exceptions=True)
 
+    # Guardar estado final dos falhados
     save_failed()
 
+    # Informação final
     all_files = glob.glob('repo_cientifico_*.json')
     total_items = 0
     for file in all_files:

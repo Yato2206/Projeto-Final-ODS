@@ -35,7 +35,7 @@ async function main() {
         let loadMoreCount = 0;
         while (true) {
             await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-            await page.waitForTimeout(500);
+            await page.waitForTimeout(2500);
 
             const btn = await page.$('button:has-text("Carregar mais")');
 
@@ -142,7 +142,7 @@ async function main() {
                     const link = el.querySelector('a')?.href || '';
                     const titulo = el.querySelector('a')?.innerText.trim() || '';
 
-                    if (titulo === "Sem título" || titulo === "Pessoas") {
+                    if (titulo === "Sem título" || titulo === "Pessoas" || titulo === "Financiadores") {
                         return null;
                     }
 
