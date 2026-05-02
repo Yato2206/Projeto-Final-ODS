@@ -46,7 +46,7 @@ class RepositoryJdbcTermsTest {
 
 
     @Test
-    fun `createTerm and update its name and check changes`() {
+    fun `createTerm and update its ods, name and origin and check changes`() {
         trxManager.run {
             val ods = repoOds.createOds("Erradicação da Pobreza")
             val ods1 = repoOds.createOds("Fome Zero")

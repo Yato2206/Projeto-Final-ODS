@@ -137,4 +137,89 @@ class DomainTest {
             assert(success) { "Failed to create a valid Terms instance." }
         }
     }
+
+    @Test
+    fun `test a document with invalid ID`() {
+        try {
+            Document(-1, "Test", "TestOrigin", "TestFilePath")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("Document ID must be greater than or equal to zero.", e.message)
+        }
+    }
+
+    @Test
+    fun `test a document with invalid Name`() {
+        try {
+            Document(1, "   ", "TestOrigin", "TestFilePath")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("Name must not be blank", e.message)
+        }
+    }
+
+    @Test
+    fun `test a document with invalid Origin`() {
+        try {
+            Document(1, "Test", "   ", "TestFilePath")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("Origin must not be blank", e.message)
+        }
+    }
+
+    @Test
+    fun `test a document with invalid File Path`() {
+        try {
+            Document(1, "Test", "TestOrigin", "  ")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("File path must not be blank", e.message)
+        }
+    }
+
+    @Test
+    fun `create a valid Document`() {
+        var success = false
+        try {
+            Document(1, "Valid Name", "Valid Origin", "ValidFilePath")
+            success = true
+        } finally {
+            assert(success) { "Failed to create a valid Document instance." }
+        }
+    }
+
+    @Test
+    fun `test an analysis with invalid ID`() {
+        try {
+            Analysis(-1, 1, "TestFilePath")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("Analysis ID must be greater than or equal to zero.", e.message)
+        }
+    }
+
+    @Test
+    fun `test an analysis with invalid document ID`() {
+        try {
+            Analysis(1, -1, "TestFilePath")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("Document ID must be greater than or equal to zero.", e.message)
+        }
+    }
+
+    @Test
+    fun `test an analysis with invalid filePath`() {
+        try {
+            Analysis(1, 1, "")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("File path must not be blank", e.message)
+        }
+    }
+
+    @Test
+    fun `create a valid Analysis`() {
+        var success = false
+        try {
+            Analysis(1, 1, "TestFilePath")
+            success = true
+        } finally {
+            assert(success) { "Failed to create a valid Analysis instance." }
+        }
+    }
 }

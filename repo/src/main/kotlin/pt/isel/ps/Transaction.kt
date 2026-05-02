@@ -11,6 +11,8 @@ interface Transaction {
     val repoOds: RepositoryOds
     val repoTerms: RepositoryTerms
     val repoData: RepositoryData
+    val repoDocument: RepositoryDocument
+    val repoAnalysis: RepositoryAnalysis
 
     fun rollback()
 }

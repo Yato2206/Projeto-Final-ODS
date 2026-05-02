@@ -35,19 +35,21 @@ class RepositoryJdbcDataTest {
     }
 
     @Test
-    fun `createData and update its name and check changes`() {
+    fun `createData and update its ods, type and dateChecked and check changes`() {
         trxManager.run {
             val dataCreated = repoData.createData("Origin1", fixedDate)
             val dataGot = repoData.getById(dataCreated.id)
             assertEquals(dataCreated, dataGot)
             val ods = repoOds.createOds("Erradicação da Pobreza")
             val updatedOdsIdData = dataCreated.copy(odsId = listOf(ods.id))
+            repoData.save(updatedOdsIdData)
             assertNotEquals(updatedOdsIdData.odsId, dataCreated.odsId)
             val updatedTypeData = dataCreated.copy(type = DataType.CIENTIFICO)
+            repoData.save(updatedTypeData)
             assertNotEquals(updatedTypeData.type, dataCreated.type)
             val updatedDateCheckedData = dataCreated.copy(dateChecked = fixedDate.plusDays(1))
-            assertNotEquals(updatedDateCheckedData.dateChecked, dataCreated.dateChecked)
             repoData.save(updatedDateCheckedData)
+            assertNotEquals(updatedDateCheckedData.dateChecked, dataCreated.dateChecked)
             val foundUpdated = repoData.getById(updatedDateCheckedData.id)
             assertEquals(updatedDateCheckedData, foundUpdated)
         }
