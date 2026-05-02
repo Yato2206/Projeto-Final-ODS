@@ -45,21 +45,14 @@ CREATE TABLE dbo.document
     id                   SERIAL PRIMARY KEY,
     name                 VARCHAR(255)        NOT NULL,
     origin               VARCHAR(255)        NOT NULL,
-    filepath             VARCHAR(255)        NOT NULL,
-)
+    filepath             VARCHAR(255)        NOT NULL
+);
 
 -- Tabela de Analysis
 CREATE TABLE dbo.analysis
 (
-    id                   SERIAL PRIMARY KEY,
+    id                   SERIAL,
     document_id          INT NOT NULL REFERENCES dbo.document (id) ON DELETE CASCADE,
     filepath             VARCHAR(255)        NOT NULL,
-);
-
--- Join table: analysis_document
-CREATE TABLE dbo.analysis_document
-(
-    analysis_id         INT NOT NULL REFERENCES dbo.analysis (id) ON DELETE CASCADE,
-    document_id         INT NOT NULL REFERENCES dbo.document (id) ON DELETE CASCADE,
-    PRIMARY KEY (analysis_id, document_id)
+    PRIMARY KEY (id, document_id)
 );

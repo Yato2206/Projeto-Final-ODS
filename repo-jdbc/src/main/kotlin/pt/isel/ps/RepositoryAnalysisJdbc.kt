@@ -14,11 +14,8 @@ import java.sql.Types
 class RepositoryAnalysisJdbc(
     private val con: Connection,
 ): RepositoryAnalysis {
-    override fun createAnalysis(
-        docId: Int,
-        filePath: String
-    ): Analysis {
-        val sql = "INSERT INTO dbo.analysis (docId, filePath) VALUES (?, ?) RETURNING id"
+    override fun createAnalysis(docId: Int, filePath: String): Analysis {
+        val sql = "INSERT INTO dbo.analysis (document_id, filePath) VALUES (?, ?) RETURNING id"
         con.prepareStatement(sql).use { stmt ->
             stmt.setInt(1, docId)
             stmt.setString(2, filePath)
@@ -39,10 +36,9 @@ class RepositoryAnalysisJdbc(
     override fun getDocument(id: Int): Document? {
         val sql = """
             SELECT d.id, d.name, d.origin, d.filepath
-            FROM dbo.analysis_document analysisdocument
-            JOIN dbo.document d ON d.id = analysisdocument.document_id
-            WHERE analysisdocument.analysis_id = ?
-            ORDER BY d.id
+            FROM dbo.analysis a
+            JOIN dbo.document d ON d.id = a.document_id
+            WHERE a.id = ?
         """.trimIndent()
         con.prepareStatement(sql).use { stmt ->
             stmt.setInt(1, id)

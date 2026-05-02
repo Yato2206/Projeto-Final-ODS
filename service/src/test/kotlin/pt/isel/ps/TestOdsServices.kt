@@ -19,7 +19,6 @@ class TestOdsServices {
 
     @Test
     fun `createOds stores ODS`() {
-        println(service.getOdsById(17))
         val ods = service.createOds("Erradicação da Pobreza1")
         assertIs<Success<Ods>>(ods)
         assertEquals("Erradicação da Pobreza1", ods.value.name)

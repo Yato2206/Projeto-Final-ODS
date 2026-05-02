@@ -27,7 +27,8 @@ class RepositoryJdbcAnalysisTest {
     @Test
     fun `createAnalysis and getById returns an Analysis`(){
         trxManager.run {
-            val analysisCreated = repoAnalysis.createAnalysis(1, "filepath1")
+            val document = repoDocument.createDocument("Doc1", "Newsletter", "filepath0")
+            val analysisCreated = repoAnalysis.createAnalysis(document.id, "filepath1")
             val analysisGot = repoAnalysis.getById(analysisCreated.id)
             val analysisExpected = Analysis(id = 1, docId = 1, filePath = "filepath1")
             assertNotNull(analysisGot)
@@ -39,7 +40,8 @@ class RepositoryJdbcAnalysisTest {
     @Test
     fun `createAnalysis and update its filepath and check changes`() {
         trxManager.run {
-            val analysisCreated = repoAnalysis.createAnalysis(1, "filepath1")
+            val document = repoDocument.createDocument("Doc1", "Newsletter", "filepath0")
+            val analysisCreated = repoAnalysis.createAnalysis(document.id, "filepath1")
             val analysisGot = repoAnalysis.getById(analysisCreated.id)
             assertEquals(analysisCreated, analysisGot)
             val updatedFilepath = analysisCreated.copy(filePath = "filepath3")
@@ -53,9 +55,10 @@ class RepositoryJdbcAnalysisTest {
     @Test
     fun `getAll returns all Analysis`() {
         trxManager.run {
-            val analysisCreated = repoAnalysis.createAnalysis(1, "filepath1")
-            val analysisCreated1 = repoAnalysis.createAnalysis(2, "filepath2")
-            val analysisCreated2 = repoAnalysis.createAnalysis(3, "filepath3")
+            val document = repoDocument.createDocument("Doc1", "Newsletter", "filepath0")
+            val analysisCreated = repoAnalysis.createAnalysis(document.id, "filepath1")
+            val analysisCreated1 = repoAnalysis.createAnalysis(document.id, "filepath2")
+            val analysisCreated2 = repoAnalysis.createAnalysis(document.id, "filepath3")
             val allAnalysis = repoAnalysis.getAll()
             assertEquals(3, allAnalysis.size)
             assertEquals(listOf(analysisCreated,analysisCreated1, analysisCreated2), allAnalysis)
@@ -66,7 +69,7 @@ class RepositoryJdbcAnalysisTest {
     fun `getDocument returns the origin of a given Document`() {
         trxManager.run {
             val document = repoDocument.createDocument("Doc1", "Newsletter", "filepath0")
-            val analysisCreated = repoAnalysis.createAnalysis(0, "filepath1")
+            val analysisCreated = repoAnalysis.createAnalysis(document.id, "filepath1")
             val foundDocument = repoAnalysis.getDocument(analysisCreated.id)
             assertEquals(document, foundDocument)
         }
@@ -75,7 +78,8 @@ class RepositoryJdbcAnalysisTest {
     @Test
     fun `getFilepath returns the filepath of a given Analysis`() {
         trxManager.run {
-            val analysisCreated = repoAnalysis.createAnalysis(1, "filepath1")
+            val document = repoDocument.createDocument("Doc1", "Newsletter", "filepath0")
+            val analysisCreated = repoAnalysis.createAnalysis(document.id, "filepath1")
             val foundFilepath = repoAnalysis.getFilepath(analysisCreated.id)
             val expectedFilepath = "filepath1"
             assertEquals(expectedFilepath, foundFilepath)
@@ -85,7 +89,8 @@ class RepositoryJdbcAnalysisTest {
     @Test
     fun `deleteById removes the Analysis`() {
         trxManager.run {
-           val analysis = repoAnalysis.createAnalysis(1, "filepath1")
+            val document = repoDocument.createDocument("Doc1", "Newsletter", "filepath0")
+           val analysis = repoAnalysis.createAnalysis(document.id, "filepath1")
             val analysisDeleted = repoAnalysis.deleteById(analysis.id)
             val shouldBeNull = repoAnalysis.getById(analysis.id)
             assertEquals(true, analysisDeleted)
@@ -96,9 +101,10 @@ class RepositoryJdbcAnalysisTest {
     @Test
     fun `clear should clear all the repo`() {
         trxManager.run {
-            val analysisCreated = repoAnalysis.createAnalysis(1, "filepath1")
-            val analysisCreated1 = repoAnalysis.createAnalysis(2, "filepath2")
-            val analysisCreated2 = repoAnalysis.createAnalysis(3, "filepath3")
+            val document = repoDocument.createDocument("Doc1", "Newsletter", "filepath0")
+            val analysisCreated = repoAnalysis.createAnalysis(document.id, "filepath1")
+            val analysisCreated1 = repoAnalysis.createAnalysis(document.id, "filepath2")
+            val analysisCreated2 = repoAnalysis.createAnalysis(document.id, "filepath3")
             repoAnalysis.clear()
             val getShouldBeNull = repoAnalysis.getById(analysisCreated.id)
             val getShouldBeNull1 = repoAnalysis.getById(analysisCreated1.id)
