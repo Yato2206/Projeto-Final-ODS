@@ -1,7 +1,10 @@
-import {useReducer, useState} from "react";
+import {useEffect, useReducer, useState} from "react";
 import {useNavigate} from "react-router";
 import Select from "react-select";
 import {api, ApiError} from "../api";
+import OutputList from "./OutputList";
+import {useFetch} from "../hooks/useFetch";
+import {Result, FilterObject, Ods} from "../interfaces";
 
 const optionsODS = [
     { value: "ods1", label: "ODS 1" },
@@ -104,6 +107,38 @@ export function SearchBar() {
     const [minDatePicked, setMinDatePicked] = useState(new Date());
     const [maxDatePicked, setMaxDatePicked] = useState(new Date());
 
+    const { fetchJsonData } = useFetch();
+    const [data, setData] = useState<any[]>([]);
+    const [filteredData, setFilteredData] = useState<Result[]>([]);
+
+    const [filters, setFilters] = useState<FilterObject>({
+        searchTerm: "",
+        ods: [],
+        type: [],
+        minDate: "",
+        maxDate: "",
+    })
+
+    const sortAndFilterResults = (filterObj: FilterObject) => {
+        return data.filter(item => {
+            return (item.results.some((result: Result) => result.name.toLowerCase().indexOf(filterObj.searchTerm.toLowerCase()) > -1)) &&
+                (filterObj.ods.length === 0 || filterObj.ods.some(ods => item.ods.includes(ods.id))) &&
+                (filterObj.type.length === 0 || filterObj.type.some(type => item.type.includes(type))) &&
+                (filterObj.minDate === "" || new Date(item.date) >= new Date(filterObj.minDate)) &&
+                (filterObj.maxDate === "" || new Date(item.date) <= new Date(filterObj.maxDate))
+        })
+    }
+
+    useEffect(() => {
+        filepaths.forEach(fetchJsonData(it, setData))
+    }), [])
+
+    useEffect(() => {
+        const data = sortAndFilterRecipes(filters);
+        setFilteredData(data)
+    }, [filters, data])
+
+
     const handleSearch = async(e: React.FormEvent) => {
         e.preventDefault();
         dispatch({type: "get"})
@@ -196,6 +231,12 @@ export function SearchBar() {
                 >
                     Search
                 </button>
+            </div>
+
+            <div>
+                <OutputList
+                    data={filteredData}
+                />
             </div>
         </div>
     )
