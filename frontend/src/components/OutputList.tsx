@@ -11,7 +11,7 @@ const OutputList: React.FC<OutputListProps> = ({data}) => {
     return (
         <div className="result-list">
             {data.map((result) => (
-                <resultCard result={result} key={result.id}></resultCard>
+                <ResultCard result={result} key={result.id}></ResultCard>
             ))}
         </div>
     )
