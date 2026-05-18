@@ -4,9 +4,10 @@ from playwright.async_api import async_playwright
 from datetime import datetime, timezone
 import glob
 import re
+import sys
 
 # Configuração
-CONCURRENT_BROWSERS = 5
+CONCURRENT_BROWSERS = 1
 ITEMS_PER_FILE = 1000
 BATCH_SIZE = 100
 HEADLESS = True  # Muda para False para ver os browsers
@@ -15,7 +16,7 @@ CURRENT_YEAR = datetime.now().year
 
 # Years to scrape (one browser per year)
 YEARS_TO_SCRAPE = [CURRENT_YEAR, CURRENT_YEAR-1, CURRENT_YEAR-2, CURRENT_YEAR-3, CURRENT_YEAR-4, CURRENT_YEAR-5]  # Periodo de 5 anos + o atual
-#YEARS_TO_SCRAPE = [CURRENT_YEAR]
+#YEARS_TO_SCRAPE = [CURRENT_YEAR-5]
 # Global variables
 current_file_index = 1
 items_in_current_file = 0
@@ -160,7 +161,7 @@ async def extract_item_data(element):
     except Exception:
         return None, None
 
-async def scrape_collection_by_year(page, year, done_links):
+async def scrape_collection_by_year(page, year, done_links, force_full=False):
     """Scrape publications for a specific year - ORDERED 14 STEP FLOW"""
     print(f"\n  [YEAR {year}] Starting scrape for year {year}")
     
@@ -244,9 +245,11 @@ async def scrape_collection_by_year(page, year, done_links):
             print(f"     Min input field not found")
             return 0
 
+        await min_input_locator.first.clear()
+        await page.wait_for_timeout(300)
         await min_input_locator.first.fill(year_str)
         await page.wait_for_timeout(500)
-        await min_input_locator.first.click()
+        #await min_input_locator.first.click()
     except Exception as e:
         print(f"     Error filling first field: {e}")
         return 0
@@ -266,9 +269,12 @@ async def scrape_collection_by_year(page, year, done_links):
             print(f"     Max input field not found after reload")
             return 0
 
+        # Clear the field first before filling
+        await max_input_locator.first.clear()
+        await page.wait_for_timeout(300)
         await max_input_locator.first.fill(year_str)
         await page.wait_for_timeout(500)
-        await max_input_locator.first.click()
+        await min_input_locator.first.click() #clicar em qualquer outro sitio
     except Exception as e:
         print(f"     Error filling second field: {e}")
         return 0
@@ -299,13 +305,17 @@ async def scrape_collection_by_year(page, year, done_links):
                 continue
             
             # Check year
-            item_year = extract_year_from_date(data.get("dataPublicacao", ""))
+            data_pub = data.get("dataPublicacao", "")
+            item_year = extract_year_from_date(data_pub)
             if item_year and item_year != year:
                 items_skipped += 1
+                # Debug: print first few skipped items to see the date format
+                if items_skipped <= 3:
+                    print(f"    [DEBUG] Skipped item - Title: {data.get('titulo', 'N/A')[:40]}, Date: '{data_pub}', Year: {item_year}")
                 continue
             
             # Check if already scraped
-            if link in done_links:
+            if not force_full and link in done_links:
                 print(f"    Found duplicate: {data.get('titulo', 'N/A')[:50]}")
                 reached_duplicate = True
                 break
@@ -376,7 +386,7 @@ async def scrape_collection_by_year(page, year, done_links):
     print(f"  [YEAR {year}] Complete: {items_found} items found, {items_skipped} skipped")
     return items_found
 
-async def scrape_with_year_filter(year, done_links):
+async def scrape_with_year_filter(year, done_links, force_full=False):
     """Scrape a single year using a Playwright browser"""
     async with async_playwright() as p:
         browser = await p.chromium.launch(
@@ -388,7 +398,7 @@ async def scrape_with_year_filter(year, done_links):
         )
 
         try:
-            items = await scrape_collection_by_year(page, year, done_links)
+            items = await scrape_collection_by_year(page, year, done_links, force_full=force_full)
             return items
         finally:
             await browser.close()
@@ -396,7 +406,24 @@ async def scrape_with_year_filter(year, done_links):
 async def main():
     global current_file_index
 
-    current_file_index = get_current_file_index()
+    force_full = len(sys.argv) > 1 and sys.argv[1].strip().lower() == "true"
+
+    # Delete all existing repo_cientifico_*.json files if force_full is enabled
+    if force_full:
+        existing_files = glob.glob("repo_cientifico_*.json")
+        if existing_files:
+            print("Force mode: Deleting existing repo files...")
+            for file in existing_files:
+                try:
+                    import os
+                    os.remove(file)
+                    print(f"  Deleted: {file}")
+                except Exception as e:
+                    print(f"  Failed to delete {file}: {e}")
+        current_file_index = 1
+        print("Reset file index to 1\n")
+    else:
+        current_file_index = get_current_file_index()
 
     print(f"\n{'='*100}")
     print(f"PLAYWRIGHT SCRAPER - Scraping All Publications by Year")
@@ -409,13 +436,15 @@ async def main():
     print(f"Already scraped links: {len(done_links)}\n")
 
     print(f"Years to scrape: {YEARS_TO_SCRAPE}")
+    if force_full:
+        print("Force mode enabled: full scrape from scratch (ignoring existing items)")
     print(f"{'='*100}\n")
 
     # Run all years in parallel
     print(f"Starting {len(YEARS_TO_SCRAPE)} browsers in parallel...\n")
 
     tasks = [
-        scrape_with_year_filter(year, done_links)
+        scrape_with_year_filter(year, done_links, force_full=force_full)
         for year in YEARS_TO_SCRAPE
     ]
 
