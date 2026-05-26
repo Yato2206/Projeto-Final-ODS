@@ -1,1 +1,1 @@
-export type Tipo = "ACAO_NA_SOCIEDADE" | "ARTISTICO" | "CIENTIFICO" | "ENSINO" | "UNDEFINED"
+export type Tipo = "Ação na sociedade" | "Artístico" | "Artigo científico" | "Ensino" | "Newsletter" | "Outro"

@@ -8,9 +8,13 @@ import sys
 
 # Configuração
 BASE_URL = "https://www.ipl.pt/en/politecnico/comunicacao/newsletter"
-OUTPUT_FILE = "newsletter_links.json"
+OUTPUT_FILE = "documents/newsletter_links.json"
 CONCURRENT_REQUESTS = 5
 RETRIES = 3
+
+# Ensure documents directory exists
+from pathlib import Path
+Path("documents").mkdir(exist_ok=True)
 
 semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 

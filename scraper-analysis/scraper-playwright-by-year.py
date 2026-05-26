@@ -1,6 +1,7 @@
 import asyncio
 import json
 from playwright.async_api import async_playwright
+from pathlib import Path
 from datetime import datetime, timezone
 import glob
 import re
@@ -11,6 +12,7 @@ CONCURRENT_BROWSERS = 1
 ITEMS_PER_FILE = 1000
 BATCH_SIZE = 100
 HEADLESS = True  # Muda para False para ver os browsers
+DOCUMENTS_DIR = Path("documents")
 
 CURRENT_YEAR = datetime.now().year
 
@@ -23,10 +25,10 @@ items_in_current_file = 0
 file_lock = asyncio.Lock()
 
 def get_data_filename(index):
-    return f"repo_cientifico_{index}.json"
+    return str(DOCUMENTS_DIR / f"repo_cientifico_{index}.json")
 
 def get_current_file_index():
-    existing_files = glob.glob("repo_cientifico_*.json")
+    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
     if not existing_files:
         return 1
     indices = []
@@ -43,7 +45,7 @@ def load_all_existing_data():
     done_links = set()
     total_count = 0
 
-    existing_files = glob.glob("repo_cientifico_*.json")
+    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
     for file in existing_files:
         try:
             with open(file, "r", encoding="utf-8") as f:
@@ -406,11 +408,13 @@ async def scrape_with_year_filter(year, done_links, force_full=False):
 async def main():
     global current_file_index
 
+    DOCUMENTS_DIR.mkdir(exist_ok=True)
+
     force_full = len(sys.argv) > 1 and sys.argv[1].strip().lower() == "true"
 
     # Delete all existing repo_cientifico_*.json files if force_full is enabled
     if force_full:
-        existing_files = glob.glob("repo_cientifico_*.json")
+        existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
         if existing_files:
             print("Force mode: Deleting existing repo files...")
             for file in existing_files:
@@ -431,7 +435,7 @@ async def main():
 
     # Load existing data
     done_links, total_existing = load_all_existing_data()
-    print(f"Existing data: {total_existing} items in {len(glob.glob('repo_cientifico_*.json'))} files")
+    print(f"Existing data: {total_existing} items in {len(glob.glob(f'{DOCUMENTS_DIR}/repo_cientifico_*.json'))} files")
     print(f"Next file: {get_data_filename(current_file_index)}")
     print(f"Already scraped links: {len(done_links)}\n")
 
@@ -461,7 +465,7 @@ async def main():
             print(f"Year {year}: Error - {result}")
 
     # Final info
-    all_files = glob.glob('repo_cientifico_*.json')
+    all_files = glob.glob(f'{DOCUMENTS_DIR}/repo_cientifico_*.json')
     total_items = 0
     for file in all_files:
         try:
@@ -478,4 +482,3 @@ async def main():
     print(f"{'='*100}\n")
 
 asyncio.run(main())
-

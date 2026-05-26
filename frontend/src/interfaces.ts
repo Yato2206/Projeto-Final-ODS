@@ -20,10 +20,14 @@ export interface Data {
 }
 
 export interface Result {
-    id: number,
-    name: string,
-    date: string,
-    origin: string,
+    id: number | string;
+    name: string;
+    date: string;
+    origin: string;
+    type?: string;
+    autores?: string;
+    dateChecked: string;
+    ods?: string[];
 }
 
 export interface FilterObject {

@@ -9,11 +9,15 @@ from urllib.parse import urlparse
 import re
 
 # Configuração
-INPUT_FILE = "newsletter_links.json"
-OUTPUT_FILE = "newsletter_content.json"
+INPUT_FILE = "documents/newsletter_links.json"
+OUTPUT_FILE = "documents/newsletter_content.json"
 CONCURRENT_REQUESTS = 5
 RETRIES = 3
 NUM_SCRAPERS = 5
+
+# Ensure documents directory exists
+from pathlib import Path
+Path("documents").mkdir(exist_ok=True)
 
 semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 

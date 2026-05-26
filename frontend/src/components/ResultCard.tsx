@@ -23,19 +23,34 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
             </div>
             
             <div className="result-card-body">
+                {result.autores && (
+                    <p className="result-card-autores">
+                        <strong>Autores:</strong> {result.autores}
+                    </p>
+                )}
                 {result.origin && (
                     <p className="result-card-origin">
                         <strong>Origem:</strong> {result.origin}
                     </p>
                 )}
+                {result.type && (
+                    <p className="result-card-type">
+                        <strong>Tipo:</strong> {result.type}
+                    </p>
+                )}
+                {result.dateChecked && (
+                    <p className="result-card-dateChecked">
+                        <strong>Date Checked:</strong> {result.dateChecked}
+                    </p>
+                )}
             </div>
 
             <div className="result-card-ods">
-                <strong>ODS:</strong>  NULL
+                <strong>ODS:</strong> {result.ods && result.ods.length > 0 ? result.ods.join(', ') : 'NULL'}
             </div>
             
             <div className="result-card-footer">
-                <a href="#" className="result-card-link">Ver mais</a>
+                <a href={String(result.id)} target="_blank" rel="noopener noreferrer" className="result-card-link">Ver mais</a>
             </div>
         </div>
     );

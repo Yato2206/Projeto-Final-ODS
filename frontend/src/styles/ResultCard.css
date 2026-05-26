@@ -1,0 +1,111 @@
+.result-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.result-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.result-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 16px;
+}
+
+.result-card-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333333;
+    flex: 1;
+}
+
+.result-card-date {
+    font-size: 14px;
+    color: #666666;
+    white-space: nowrap;
+}
+
+.result-card-body {
+    margin-bottom: 12px;
+}
+
+.result-card-autores {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #555555;
+}
+
+.result-card-origin {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #555555;
+}
+
+.result-card-type {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #555555;
+}
+
+.result-card-dateChecked {
+    margin: 0;
+    font-size: 14px;
+    color: #555555;
+}
+
+.result-card-ods {
+    margin: 0;
+    font-size: 14px;
+    color: #555555;
+}
+
+.result-card-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.result-card-link {
+    font-size: 14px;
+    color: #1976d2;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.result-card-link:hover {
+    color: #1565c0;
+    text-decoration: underline;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .result-card {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+
+    .result-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .result-card-date {
+        white-space: normal;
+    }
+
+    .result-card-title {
+        font-size: 16px;
+    }
+}
+

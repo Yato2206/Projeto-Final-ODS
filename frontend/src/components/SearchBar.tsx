@@ -2,28 +2,38 @@ import {useEffect, useReducer, useState} from "react";
 import OutputList from "./OutputList";
 import FilterPanel from "./FilterPanel";
 import {Result} from "../interfaces";
+import { Tipo } from "../types";
 import '../styles/SearchBar.css';
 
+const AVAILABLE_TYPES: Tipo[] = ["Ação na sociedade", "Artístico", "Artigo científico", "Ensino", "Newsletter", "Outro"];
+const ITEMS_PER_PAGE = 10;
+
 type State = {
-    text: string;
     minDate: string;
     maxDate: string;
-    // TODO: Add ODS and type when implementing those filters
-    // ods: any[];
-    // type: any[];
+    types: string[];
+    ods: string[];
+};
+
+type PendingFilters = {
+    minDate: string;
+    maxDate: string;
+    types: string[];
+    ods: string[];
 };
 
 type Action =
-    | { type: "input-change"; text: string; minDate: string; maxDate: string };
+    | { type: "update-pending-filters"; minDate: string; maxDate: string; types: string[] }
+    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[] };
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
-        case "input-change":
+        case "apply-filters":
             return {
-                ...state,
-                text: action.text,
                 minDate: action.minDate,
                 maxDate: action.maxDate,
+                types: action.types,
+                ods: action.ods,
             };
         default:
             return state;
@@ -31,15 +41,24 @@ function reducer(state: State, action: Action): State {
 }
 
 const initialState: State = {
-    text: "",
     minDate: "",
     maxDate: "",
+    types: [],
+    ods: [],
 };
 
 export function SearchBar() {
     const [state, dispatch] = useReducer(reducer, initialState);
-    const [data, setData] = useState<any[]>([]);
+    const [pendingFilters, setPendingFilters] = useState<PendingFilters>({
+        minDate: "",
+        maxDate: "",
+        types: [],
+        ods: [],
+    });
+    const [data, setData] = useState<Result[]>([]);
     const [filteredData, setFilteredData] = useState<Result[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [availableOds, setAvailableOds] = useState<string[]>([]);
 
     // Calculate the year range (current year - 5 years to current year)
     const getYearRange = (): { minYear: number; maxYear: number } => {
@@ -48,58 +67,70 @@ export function SearchBar() {
         return { minYear, maxYear: currentYear };
     };
 
-    // Helper function to extract newsletter number from key
-    const getNewsletterNumber = (key: string): string | null => {
-        const match = key.match(/#?(\d+)/);
-        return match ? match[1] : null;
+    // Map document tipo to predefined type, defaulting to "Outro"
+    const mapTipoToType = (tipo: string): Tipo => {
+        if (AVAILABLE_TYPES.includes(tipo as Tipo)) {
+            return tipo as Tipo;
+        }
+        return "Outro";
     };
 
-    // Fetch and merge newsletter content with newsletter dates
-    const fetchNewsletterData = async () => {
+    // Fetch all formatted documents
+    const fetchDocumentsData = async () => {
         try {
-            const [contentResponse, newsletterResponse] = await Promise.all([
-                fetch('/newsletter-content.json'),
-                fetch('/newsletter.json')
-            ]);
+            const formattedDocs: Result[] = [];
+            const odsSet = new Set<string>();
 
-            if (!contentResponse.ok || !newsletterResponse.ok) {
-                throw new Error('Failed to fetch data');
+            // Load all resultados_ods_parte_*.json files
+            for (let i = 1; i <= 7; i++) {
+                try {
+                    const response = await fetch(`/resultados_ods_${i}.json`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        Object.entries(data).forEach(([key, value]: [string, any]) => {
+                            const ods = value.ods_mapeados ? Object.keys(value.ods_mapeados) : [];
+                            
+                            // Extract ODS numbers for the filter
+                            ods.forEach((odsKey: string) => {
+                                odsSet.add(odsKey);
+                            });
+
+                            const doc: Result = {
+                                id: key,
+                                name: value.titulo,
+                                date: value.dataPublicacao,
+                                type: mapTipoToType(value.tipo),
+                                autores: value.autores,
+                                origin: value.origem,
+                                dateChecked: value.dateChecked,
+                                ods: ods,
+                            };
+                            formattedDocs.push(doc);
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Error loading resultados_ods_${i}.json:`, error);
+                }
             }
 
-            const contentData = await contentResponse.json();
-            const newsletterData = await newsletterResponse.json();
-
-            // Merge the data: use newsletter.json for dates and newsletter-content.json for content
-            const mergedData = Object.entries(contentData).map(([key, content]: [string, any]) => {
-                // Extract newsletter number to find matching entry
-                const contentNumber = getNewsletterNumber(key);
-                const newsletterEntry = Object.entries(newsletterData).find(
-                    ([newsKey, _]) => getNewsletterNumber(newsKey) === contentNumber
-                );
-
-                // Use "date" field from newsletter.json (e.g., "2024-04-19"), not dateChecked
-                const newsDate = newsletterEntry ? (newsletterEntry[1] as any).date : content.dateChecked;
-
-                return {
-                    id: key,
-                    name: content.politecnicoTitulo,
-                    date: newsDate,
-                    origin: "Politécnico de Lisboa",
-                    // TODO: Add ODS and type fields when available
-                    // ods: [],
-                    // type: undefined,
-                };
-            });
-
+            console.log("Loaded documents:", formattedDocs.length);
             // Sort by date descending
-            mergedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setData(mergedData);
+            formattedDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setData(formattedDocs);
+            // Set available ODS sorted
+            const availableOds = Array.from(odsSet).sort((a, b) => {
+                const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+                const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+                return numA - numB;
+            });
+            setAvailableOds(availableOds);
+            setCurrentPage(1);
         } catch (error) {
-            console.error("Error fetching newsletter data:", error);
+            console.error("Error fetching documents data:", error);
         }
     }
 
-    // Helper function to convert month input to date range
     const getMonthDateRange = (monthStr: string): { startDate: Date; endDate: Date } | null => {
         if (!monthStr) return null;
         const [year, month] = monthStr.split('-');
@@ -108,19 +139,10 @@ export function SearchBar() {
         return { startDate, endDate };
     };
 
-    // Filter data based on text and date filters
     const applyFilters = () => {
         let filtered = [...data];
 
-        // Text filter - search in name
-        if (state.text.trim()) {
-            const searchTerm = state.text.toLowerCase();
-            filtered = filtered.filter(item =>
-                item.name.toLowerCase().includes(searchTerm)
-            );
-        }
-
-        // Date range filter - uses "date" field from newsletter.json
+        // Date range filter
         if (state.minDate || state.maxDate) {
             filtered = filtered.filter(item => {
                 const itemDate = new Date(item.date);
@@ -143,74 +165,147 @@ export function SearchBar() {
             });
         }
 
-        // TODO: ODS filter - when ODS data is available
-        // if (state.ods && state.ods.length > 0) {
-        //     filtered = filtered.filter(item =>
-        //         item.ods && state.ods.some(ods => item.ods.includes(ods.id))
-        //     );
-        // }
+        // Type filter
+        if (state.types && state.types.length > 0) {
+            filtered = filtered.filter(item =>
+                item.type && state.types.includes(item.type)
+            );
+        }
 
-        // TODO: Type filter - when Type data is available
-        // if (state.type && state.type.length > 0) {
-        //     filtered = filtered.filter(item =>
-        //         item.type && state.type.includes(item.type)
-        //     );
-        // }
+        // ODS filter - check if any selected ODS is present in item.ods
+        if (state.ods && state.ods.length > 0) {
+            filtered = filtered.filter(item =>
+                item.ods && item.ods.some((odsItem: string) => state.ods.includes(odsItem))
+            );
+        }
 
         setFilteredData(filtered);
+        setCurrentPage(1);
+    };
+
+    const getPageData = () => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return filteredData.slice(startIndex, endIndex);
+    };
+
+    const getTotalPages = () => {
+        return Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+    };
+
+    const handlePreviousPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < getTotalPages()) {
+            setCurrentPage(currentPage + 1);
+        }
     };
 
     useEffect(() => {
-        fetchNewsletterData();
+        fetchDocumentsData();
     }, []);
 
+    // When data loads initially, show all data
+    useEffect(() => {
+        if (data.length > 0) {
+            setFilteredData(data);
+        }
+    }, [data]);
+
+    // When state filters change (after Apply button is clicked), apply filters
     useEffect(() => {
         applyFilters();
-    }, [state, data]);
-
-    const handleTextChange = (text: string) => {
-        dispatch({
-            type: "input-change",
-            text,
-            minDate: state.minDate,
-            maxDate: state.maxDate
-        });
-    };
+    }, [state]);
 
     const handleMinDateChange = (minDate: string) => {
-        dispatch({
-            type: "input-change",
-            text: state.text,
-            minDate,
-            maxDate: state.maxDate
+        setPendingFilters({
+            ...pendingFilters,
+            minDate
         });
     };
 
     const handleMaxDateChange = (maxDate: string) => {
-        dispatch({
-            type: "input-change",
-            text: state.text,
-            minDate: state.minDate,
+        setPendingFilters({
+            ...pendingFilters,
             maxDate
+        });
+    };
+
+    const handleTypesChange = (types: string[]) => {
+        setPendingFilters({
+            ...pendingFilters,
+            types
+        });
+    };
+
+    const handleOdsChange = (ods: string[]) => {
+        setPendingFilters({
+            ...pendingFilters,
+            ods
+        });
+    };
+
+    const handleApplyFilters = () => {
+        dispatch({
+            type: "apply-filters",
+            minDate: pendingFilters.minDate,
+            maxDate: pendingFilters.maxDate,
+            types: pendingFilters.types,
+            ods: pendingFilters.ods
         });
     };
 
     return (
         <div className="search-bar-container">
-            <h1>Pesquisar Newsletters</h1>
+            <h1>Pesquisar Documentos</h1>
             
             <FilterPanel
-                onTextChange={handleTextChange}
                 onMinDateChange={handleMinDateChange}
                 onMaxDateChange={handleMaxDateChange}
-                minDate={state.minDate}
-                maxDate={state.maxDate}
+                onTypesChange={handleTypesChange}
+                onOdsChange={handleOdsChange}
+                onApplyFilters={handleApplyFilters}
+                minDate={pendingFilters.minDate}
+                maxDate={pendingFilters.maxDate}
+                types={pendingFilters.types}
+                ods={pendingFilters.ods}
+                availableTypes={AVAILABLE_TYPES}
+                availableOds={availableOds}
+                buttonLabel="Aplicar Filtros"
                 yearRange={getYearRange()}
             />
 
             <div className="results-container">
                 <h2>Resultados ({filteredData.length})</h2>
-                <OutputList data={filteredData} />
+                <OutputList data={getPageData()} />
+                
+                {getTotalPages() > 1 && (
+                    <div className="pagination-controls">
+                        <button
+                            onClick={handlePreviousPage}
+                            disabled={currentPage === 1}
+                            className="pagination-button"
+                            title="Página anterior"
+                        >
+                            ← Anterior
+                        </button>
+                        <span className="pagination-info">
+                            Página {currentPage} de {getTotalPages()}
+                        </span>
+                        <button
+                            onClick={handleNextPage}
+                            disabled={currentPage === getTotalPages()}
+                            className="pagination-button"
+                            title="Próxima página"
+                        >
+                            Próxima →
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )

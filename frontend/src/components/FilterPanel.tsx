@@ -2,43 +2,48 @@ import { useState } from "react";
 import '../styles/FilterPanel.css';
 
 interface FilterPanelProps {
-    onTextChange: (text: string) => void;
     onMinDateChange: (date: string) => void;
     onMaxDateChange: (date: string) => void;
+    onTypesChange: (types: string[]) => void;
+    onOdsChange: (ods: string[]) => void;
+    onApplyFilters: () => void;
     minDate: string;
     maxDate: string;
-    isLoading: boolean;
+    types: string[];
+    ods: string[];
+    availableTypes: string[];
+    availableOds: string[];
+    buttonLabel?: string;
     yearRange?: { minYear: number; maxYear: number };
 }
 
 const FilterPanel: React.FC<FilterPanelProps> = ({
-    onTextChange,
     onMinDateChange,
     onMaxDateChange,
+    onTypesChange,
+    onOdsChange,
+    onApplyFilters,
     minDate,
     maxDate,
-    isLoading,
+    types,
+    ods,
+    availableTypes,
+    availableOds,
+    buttonLabel = "Aplicar Filtros",
     yearRange
 }) => {
-    const [searchText, setSearchText] = useState("");
+    // ...existing code...
 
-    // Calculate max month string for HTML5 input constraint
+
     const getMaxMonthString = (): string => {
         const maxYear = yearRange?.maxYear || new Date().getFullYear();
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
-        
-        // If we're in the current year, limit to current month. Otherwise, use December of max year.
+
         if (maxYear === currentYear) {
             return `${maxYear}-${String(currentMonth).padStart(2, '0')}`;
         }
         return `${maxYear}-12`;
-    };
-
-    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setSearchText(value);
-        onTextChange(value);
     };
 
     const handleMinDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,21 +54,45 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         onMaxDateChange(e.target.value);
     };
 
+    const handleTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const typeValue = e.target.value;
+        let updatedTypes: string[];
+
+        if (e.target.checked) {
+            updatedTypes = [...types, typeValue];
+        } else {
+            updatedTypes = types.filter(t => t !== typeValue);
+        }
+
+        onTypesChange(updatedTypes);
+    };
+
+    const handleOdsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const odsValue = e.target.value;
+        let updatedOds: string[];
+
+        if (e.target.checked) {
+            updatedOds = [...ods, odsValue];
+        } else {
+            updatedOds = ods.filter(o => o !== odsValue);
+        }
+
+        onOdsChange(updatedOds);
+    };
+
+    const handleSelectAllOds = () => {
+        if (ods.length === availableOds.length) {
+            // Deselect all
+            onOdsChange([]);
+        } else {
+            // Select all
+            onOdsChange([...availableOds]);
+        }
+    };
+
     return (
         <div className="filter-panel">
             <h2>Filtros</h2>
-            
-            <div className="filter-group">
-                <label htmlFor="search-text">Pesquisar por nome:</label>
-                <input
-                    id="search-text"
-                    type="text"
-                    placeholder="Digite o nome da newsletter..."
-                    value={searchText}
-                    onChange={handleTextChange}
-                    className="filter-input"
-                />
-            </div>
 
             <div className="filter-group">
                 <label htmlFor="min-date">Data inicial (mês/ano):</label>
@@ -91,35 +120,59 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                 />
             </div>
 
-            {/* TODO: ODS Filter - Uncomment and implement when ODS data is available */}
-            {/* <div className="filter-group">
-                <label htmlFor="ods-select">ODS:</label>
-                <Select
-                    id="ods-select"
-                    options={odsOptions}
-                    isMulti
-                    onChange={handleOdsChange}
-                    className="filter-select"
-                />
-            </div> */}
+            <div className="filter-group">
+                <label>Tipo:</label>
+                <div className="type-checkboxes">
+                    {availableTypes.map(typeOption => (
+                        <div key={typeOption} className="checkbox-item">
+                            <input
+                                id={`type-${typeOption}`}
+                                type="checkbox"
+                                value={typeOption}
+                                checked={types.includes(typeOption)}
+                                onChange={handleTypeChange}
+                            />
+                            <label htmlFor={`type-${typeOption}`}>{typeOption}</label>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
-            {/* TODO: Type Filter - Uncomment and implement when Type data is available */}
-            {/* <div className="filter-group">
-                <label htmlFor="type-select">Tipo:</label>
-                <Select
-                    id="type-select"
-                    options={typeOptions}
-                    isMulti
-                    onChange={handleTypeChange}
-                    className="filter-select"
-                />
-            </div> */}
+            <div className="filter-group">
+                <div className="filter-label-with-button">
+                    <label>ODS:</label>
+                    <button 
+                        onClick={handleSelectAllOds}
+                        className="select-all-button"
+                        title={ods.length === availableOds.length ? "Desselecionar todos" : "Selecionar todos"}
+                    >
+                        {ods.length === availableOds.length ? "Desselecionar tudo" : "Selecionar tudo"}
+                    </button>
+                </div>
+                <div className="ods-checkboxes">
+                    {availableOds.map(odsOption => (
+                        <div key={odsOption} className="checkbox-item">
+                            <input
+                                id={`ods-${odsOption}`}
+                                type="checkbox"
+                                value={odsOption}
+                                checked={ods.includes(odsOption)}
+                                onChange={handleOdsChange}
+                            />
+                            <label htmlFor={`ods-${odsOption}`}>{odsOption}</label>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <button onClick={onApplyFilters} className="apply-button">
+                {buttonLabel}
+            </button>
         </div>
     );
 };
 
 export default FilterPanel;
-
 
 
 
