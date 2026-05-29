@@ -250,6 +250,7 @@ async def scrape_collection_by_year(page, year, done_links, force_full=False):
         await min_input_locator.first.clear()
         await page.wait_for_timeout(300)
         await min_input_locator.first.fill(year_str)
+        await min_input_locator.first.press('Enter')  # Pressionar Enter após preencher
         await page.wait_for_timeout(500)
         #await min_input_locator.first.click()
     except Exception as e:
@@ -276,7 +277,7 @@ async def scrape_collection_by_year(page, year, done_links, force_full=False):
         await page.wait_for_timeout(300)
         await max_input_locator.first.fill(year_str)
         await page.wait_for_timeout(500)
-        await min_input_locator.first.click() #clicar em qualquer outro sitio
+        await max_input_locator.first.press('Enter')  # Pressionar Enter após preencher
     except Exception as e:
         print(f"     Error filling second field: {e}")
         return 0
@@ -294,7 +295,7 @@ async def scrape_collection_by_year(page, year, done_links, force_full=False):
 
     while True:
         # STEP 11: Scrape items from current page
-        print(f"    [11/14] Scraping items from page {local_page_count}...")
+        print(f"    [11/14] ({year_str}) Scraping items from page {local_page_count}...")
         items = await page.query_selector_all('.mt-4.mb-4.d-flex')
         print(f"    Found {len(items)} items on page {local_page_count}")
 

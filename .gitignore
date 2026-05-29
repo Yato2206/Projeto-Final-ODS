@@ -3,5 +3,5 @@
 .kotlin
 build
 node_modules
-package-lock.json
+scraper-analysis/package-lock.json
 *.json

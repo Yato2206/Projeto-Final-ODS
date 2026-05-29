@@ -44,11 +44,11 @@ def main():
     print(f"Start time: {datetime.now().isoformat()}")
     
     steps = [
-        ("python scraper-python-newsletter-all.py", "Newsletter Links Scraper"),
-        ("python scraper-python-newsletter-each.py", "Newsletter Content Scraper"),
-        ("python scraper-playwright-by-year.py", "Scientific Repository Scraper"),
-        ("python format_documents.py", "Document Formatter"),
-        ("python analyze_ods.py", "ODS Analysis"),
+        ("py scraper-python-newsletter-all.py", "Newsletter Links Scraper"),
+        ("py scraper-python-newsletter-each.py", "Newsletter Content Scraper"),
+        ("py scraper-playwright-by-year.py", "Scientific Repository Scraper"),
+        ("py format_documents.py", "Document Formatter"),
+        ("py analyze_ods.py", "ODS Analysis"),
     ]
     
     results = []
