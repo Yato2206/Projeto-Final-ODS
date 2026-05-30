@@ -27,13 +27,13 @@ def run_command(command, description):
     try:
         result = subprocess.run(command, shell=True, cwd=SCRAPER_DIR)
         if result.returncode == 0:
-            print(f"✓ {description} completed successfully")
+            print(f" {description} completed successfully")
             return True
         else:
-            print(f"✗ {description} failed with return code {result.returncode}")
+            print(f" {description} failed with return code {result.returncode}")
             return False
     except Exception as e:
-        print(f"✗ Error running {description}: {e}")
+        print(f" Error running {description}: {e}")
         return False
 
 def main():
@@ -56,24 +56,24 @@ def main():
         success = run_command(command, description)
         results.append((description, success))
         if not success:
-            print(f"\n⚠ Warning: {description} failed, but continuing with pipeline...")
+            print(f"\n Warning: {description} failed, but continuing with pipeline...")
     
     # Print summary
     print("\n" + "="*60)
     print("PIPELINE SUMMARY")
     print("="*60)
     for description, success in results:
-        status = "✓ PASSED" if success else "✗ FAILED"
+        status = " PASSED" if success else " FAILED"
         print(f"{status}: {description}")
     
     print(f"\nEnd time: {datetime.now().isoformat()}")
     
     all_passed = all(success for _, success in results)
     if all_passed:
-        print("\n✓ ALL STEPS COMPLETED SUCCESSFULLY!")
+        print("\n ALL STEPS COMPLETED SUCCESSFULLY!")
         return 0
     else:
-        print("\n⚠ SOME STEPS FAILED - Review logs above")
+        print("\n SOME STEPS FAILED - Review logs above")
         return 1
 
 if __name__ == "__main__":

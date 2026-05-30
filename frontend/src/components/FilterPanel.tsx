@@ -32,8 +32,6 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     buttonLabel = "Aplicar Filtros",
     yearRange
 }) => {
-    // ...existing code...
-
 
     const getMaxMonthString = (): string => {
         const maxYear = yearRange?.maxYear || new Date().getFullYear();

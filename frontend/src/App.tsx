@@ -8,16 +8,18 @@ import {DashboardFilters} from "./components/Dashboard";
 const router = createBrowserRouter([
     {
         path:"/",
-        element: <Home/>
+        element: <Home/>,
+        children: [
+            {
+                path:"/dashboard",
+                element: <DashboardFilters/>
+            },
+            {
+                path:"/documents",
+                element: <SearchBar/>
+            }
+        ]
     },
-    {
-        path:"/dashboard",
-        element: <DashboardFilters/>
-    },
-    {
-        path:"/documents",
-        element: <SearchBar/>
-    }
 ]);
 
 createRoot(document.getElementById("container")!).render(

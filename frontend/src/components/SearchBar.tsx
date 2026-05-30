@@ -2,11 +2,30 @@ import {useEffect, useReducer, useState} from "react";
 import OutputList from "./OutputList";
 import FilterPanel from "./FilterPanel";
 import {Result} from "../interfaces";
-import { Tipo } from "../types";
+import { Tipo , Ods } from "../types";
 import '../styles/SearchBar.css';
 
-const AVAILABLE_TYPES: Tipo[] = ["Ação na sociedade", "Artístico", "Artigo científico", "Ensino", "Newsletter", "Outro"];
 const ITEMS_PER_PAGE = 10;
+const availableTypes: Tipo[] = ["Ação na sociedade", "Artístico", "Artigo científico", "Ensino", "Newsletter", "Outro"];
+const availableOds: Ods[] = [
+    "ODS 1 - Erradicar a Pobreza",
+    "ODS 2 - Erradicar a Fome",
+    "ODS 3 - Saúde de Qualidade",
+    "ODS 4 - Educação de Qualidade",
+    "ODS 5 - Igualdade de Género",
+    "ODS 6 - Água Potável e Saneamento",
+    "ODS 7 - Energias Renováveis e Acessíveis",
+    "ODS 8 - Trabalho Digno e Crescimento Económico",
+    "ODS 9 - Indústria, Inovação e Infraestruturas",
+    "ODS 10 - Reduzir as Desigualdades",
+    "ODS 11 - Cidades e Comunidades Sustentáveis",
+    "ODS 12 - Produção e Consumo Sustentáveis",
+    "ODS 13 - Ação Climática",
+    "ODS 14 - Proteger a Vida Marinha",
+    "ODS 15 - Proteger a Vida Terrestre",
+    "ODS 16 - Paz, Justiça e Instituições Eficazes",
+    "ODS 17 - Parcerias para a Implementação dos Objetivos"
+]
 
 type State = {
     minDate: string;
@@ -58,7 +77,6 @@ export function SearchBar() {
     const [data, setData] = useState<Result[]>([]);
     const [filteredData, setFilteredData] = useState<Result[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const [availableOds, setAvailableOds] = useState<string[]>([]);
 
     // Calculate the year range (current year - 5 years to current year)
     const getYearRange = (): { minYear: number; maxYear: number } => {
@@ -69,7 +87,7 @@ export function SearchBar() {
 
     // Map document tipo to predefined type, defaulting to "Outro"
     const mapTipoToType = (tipo: string): Tipo => {
-        if (AVAILABLE_TYPES.includes(tipo as Tipo)) {
+        if (availableTypes.includes(tipo as Tipo)) {
             return tipo as Tipo;
         }
         return "Outro";
@@ -119,12 +137,6 @@ export function SearchBar() {
             formattedDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             setData(formattedDocs);
             // Set available ODS sorted
-            const availableOds = Array.from(odsSet).sort((a, b) => {
-                const numA = parseInt(a.match(/\d+/)?.[0] || '0');
-                const numB = parseInt(b.match(/\d+/)?.[0] || '0');
-                return numA - numB;
-            });
-            setAvailableOds(availableOds);
             setCurrentPage(1);
         } catch (error) {
             console.error("Error fetching documents data:", error);
@@ -273,7 +285,7 @@ export function SearchBar() {
                 maxDate={pendingFilters.maxDate}
                 types={pendingFilters.types}
                 ods={pendingFilters.ods}
-                availableTypes={AVAILABLE_TYPES}
+                availableTypes={availableTypes}
                 availableOds={availableOds}
                 buttonLabel="Aplicar Filtros"
                 yearRange={getYearRange()}
