@@ -180,9 +180,15 @@ async def scrape_collection_by_year(page, year, done_links, force_full=False):
     # STEP 2: Look for "Carregar mais" button
     print(f"    [2/14] Looking for 'Carregar mais' button...")
     try:
+
         # Use locator which is more reliable than query_selector
         load_more_locator = page.locator('button:has-text("Carregar mais")')
         count = await load_more_locator.count()
+
+        if count == 0:
+            # Try English label if Portuguese one not found
+            max_input_locator = page.locator('input[aria-label="Load more"]')
+            count = await max_input_locator.count()
 
         if count == 0:
             print(f"     'Carregar mais' button not found on initial load")
@@ -244,6 +250,11 @@ async def scrape_collection_by_year(page, year, done_links, force_full=False):
         count = await min_input_locator.count()
 
         if count == 0:
+            # Try English label if Portuguese one not found
+            max_input_locator = page.locator('input[aria-label="Minimum Date"]')
+            count = await max_input_locator.count()
+
+        if count == 0:
             print(f"     Min input field not found")
             return 0
 
@@ -267,6 +278,10 @@ async def scrape_collection_by_year(page, year, done_links, force_full=False):
         # Use locator for the second input (more reliable after page reload)
         max_input_locator = page.locator('input[aria-label="Data máxima"]')
         count = await max_input_locator.count()
+        if count == 0:
+            # Try English label if Portuguese one not found
+            max_input_locator = page.locator('input[aria-label="Maximum Date"]')
+            count = await max_input_locator.count()
 
         if count == 0:
             print(f"     Max input field not found after reload")

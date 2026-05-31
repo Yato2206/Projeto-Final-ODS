@@ -1,3 +1,4 @@
+import React from "react"
 import FilterPanel from "./FilterPanel";
 import {useEffect, useReducer, useState} from "react";
 import {Result} from "../interfaces";

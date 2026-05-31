@@ -1,4 +1,4 @@
-
+import React from "react"
 import ResultCard from './ResultCard';
 
 import { Result } from '../interfaces'

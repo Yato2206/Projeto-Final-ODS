@@ -1,3 +1,4 @@
+import React from "react"
 import { Result } from '../interfaces';
 import '../styles/ResultCard.css';
 
