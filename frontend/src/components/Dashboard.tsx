@@ -2,6 +2,7 @@ import React from "react"
 import FilterPanel from "./FilterPanel";
 import {useEffect, useReducer, useState} from "react";
 import {Result} from "../interfaces";
+import { getNumberDocs } from "./Utilis";
 import { Tipo , Ods } from "../types";
 import '../styles/Dashboard.css';
 
@@ -97,7 +98,7 @@ export function DashboardFilters() {
             const odsSet = new Set<string>();
 
             // Load all resultados_ods_*.json files
-            for (let i = 1; i <= 7; i++) {
+            for (let i = 1; i <= await getNumberDocs(); i++) {
                 try {
                     const response = await fetch(`/resultados_ods_${i}.json`);
                     if (response.ok) {

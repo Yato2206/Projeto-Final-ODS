@@ -47,6 +47,7 @@ def main():
         ("py scraper-python-newsletter-all.py", "Newsletter Links Scraper"),
         ("py scraper-python-newsletter-each.py", "Newsletter Content Scraper"),
         ("py scraper-playwright-by-year.py", "Scientific Repository Scraper"),
+        ("py ./apis/scopus-api-scraper.py", "Scopus API Scraper"),
         ("py format_documents.py", "Document Formatter"),
         ("py analyze_ods.py", "ODS Analysis"),
     ]

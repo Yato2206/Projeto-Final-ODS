@@ -20,10 +20,63 @@ into a standardized structure:
 
 import json
 import glob
+import argparse
 from pathlib import Path
 from datetime import datetime
 
-DOCUMENTS_DIR = Path("documents")
+SCRIPT_DIR = Path(__file__).parent
+DOCUMENTS_DIR = SCRIPT_DIR / "documents"
+
+
+def load_formatted_documents_from_directory(source_dir, origin_label, pattern="*.json"):
+    """Load already-formatted documents from a directory."""
+    formatted_docs = {}
+    source_dir = Path(source_dir)
+
+    if not source_dir.exists():
+        print(f"Directory not found: {source_dir}")
+        return formatted_docs
+
+    source_files = sorted(source_dir.glob(pattern))
+    if not source_files:
+        print(f"No JSON files found in: {source_dir}")
+        return formatted_docs
+
+    total_items = 0
+
+    for source_file in source_files:
+        try:
+            with open(source_file, "r", encoding="utf-8") as f:
+                documents = json.load(f)
+
+            file_items = 0
+            for link, doc in documents.items():
+                if not isinstance(doc, dict):
+                    continue
+
+                texto = doc.get("texto", "")
+                if not texto:
+                    continue
+
+                formatted_docs[link] = {
+                    "titulo": doc.get("titulo", ""),
+                    "autores": doc.get("autores", ""),
+                    "texto": texto,
+                    "dataPublicacao": doc.get("dataPublicacao", ""),
+                    "tipo": doc.get("tipo", ""),
+                    "dateChecked": doc.get("dateChecked", datetime.now().isoformat()),
+                    "origem": doc.get("origem", origin_label),
+                }
+                total_items += 1
+                file_items += 1
+
+            print(f"{source_file.name}: {file_items} items")
+
+        except Exception as e:
+            print(f"Error processing {source_file}: {e}")
+
+    print(f"Formatted {total_items} items from {source_dir}")
+    return formatted_docs
 
 def format_newsletter_documents():
     """Format newsletter content to standardized structure"""
@@ -136,14 +189,14 @@ def format_scientific_repo_documents():
     return formatted_docs
 
 
-def merge_and_save(newsletter_docs, repo_docs, chunk_size=1000):
+def merge_and_save(newsletter_docs, repo_docs, api_docs, chunk_size=1000):
     """Merge all documents and save into multiple chunked files"""
 
     print("\n" + "="*60)
     print("MERGING AND SAVING")
     print("="*60)
 
-    all_docs = {**newsletter_docs, **repo_docs}
+    all_docs = {**newsletter_docs, **repo_docs, **api_docs}
 
     items = list(all_docs.items())
 
@@ -165,9 +218,23 @@ def merge_and_save(newsletter_docs, repo_docs, chunk_size=1000):
 
     return all_docs
 
+
+def parse_args():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Format and merge document JSON files.")
+    parser.add_argument(
+        "--extra-dir",
+        action="append",
+        default=[],
+        help="Path to an extra directory with already-formatted document JSON files. Can be passed multiple times.",
+    )
+    return parser.parse_args()
+
 def main():
     """Main formatter pipeline"""
     print("\nStarting document formatter...")
+
+    args = parse_args()
 
     # Ensure documents directory exists
     DOCUMENTS_DIR.mkdir(exist_ok=True)
@@ -175,17 +242,25 @@ def main():
     # Format documents from each source
     newsletter_docs = format_newsletter_documents()
     repo_docs = format_scientific_repo_documents()
-
-    # Merge and save
-    all_docs = merge_and_save(newsletter_docs, repo_docs)
+    api_docs = load_formatted_documents_from_directory(SCRIPT_DIR / "apis" / "documents", "Scopus API")
+    all_docs = merge_and_save(newsletter_docs, repo_docs, api_docs)
 
     print("\n" + "="*60)
     print(f"FORMATTING COMPLETE!")
     print(f"Total documents: {len(all_docs)}")
     print(f"  - Newsletter items: {len(newsletter_docs)}")
     print(f"  - Scientific Repository items: {len(repo_docs)}")
+    print(f"  - Scopus API items: {len(api_docs)}")
     print(f"{'='*60}\n")
 
 
 if __name__ == "__main__":
     main()
+
+"""
+    extra_docs = {}
+    for extra_dir in args.extra_dir:
+        extra_docs.update(load_formatted_documents_from_directory(extra_dir, "Extra Source"))
+"""
+    # Merge and save
+    #all_docs = merge_and_save(newsletter_docs, repo_docs, {**api_docs, **extra_docs})

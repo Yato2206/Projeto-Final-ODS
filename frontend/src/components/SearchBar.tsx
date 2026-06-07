@@ -2,6 +2,7 @@ import React from "react"
 import {useEffect, useReducer, useState} from "react";
 import OutputList from "./OutputList";
 import FilterPanel from "./FilterPanel";
+import { getNumberDocs } from "./Utilis";
 import {Result} from "../interfaces";
 import { Tipo , Ods } from "../types";
 import '../styles/SearchBar.css';
@@ -101,7 +102,7 @@ export function SearchBar() {
             const odsSet = new Set<string>();
 
             // Load all resultados_ods_parte_*.json files
-            for (let i = 1; i <= 7; i++) {
+            for (let i = 1; i <= await getNumberDocs(); i++) {
                 try {
                     const response = await fetch(`/resultados_ods_${i}.json`);
                     if (response.ok) {
