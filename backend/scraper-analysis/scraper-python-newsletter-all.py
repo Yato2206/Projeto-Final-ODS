@@ -16,7 +16,7 @@ MIN_ITEMS_PER_PAGE = 10
 # Ensure documents directory exists
 Path("documents").mkdir(exist_ok=True)
 
-
+#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def load_existing_data():
     """Load existing newsletter data"""
     if Path(OUTPUT_FILE).exists():
@@ -24,7 +24,7 @@ def load_existing_data():
             return json.load(f)
     return {}
 
-
+#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def save_data(data):
     """Save newsletter data to file, sorted by publication date"""
     sorted_data = dict(sorted(
@@ -37,7 +37,7 @@ def save_data(data):
         json.dump(sorted_data, f, ensure_ascii=False, indent=2)
     print(f"Newsletter saved! Total items: {len(sorted_data)}")
 
-
+#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def fetch(url):
     """Fetch page with retries"""
     for attempt in range(RETRIES):
@@ -132,7 +132,7 @@ def _scrape_sequential(start_page, existing_data, all_news_shared, prefix="[Sequ
         page += 1
         sleep(1)
 
-
+#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def _print_summary(existing_data, all_news):
     """Print scraping summary"""
     new_count = len(all_news) - len(existing_data)

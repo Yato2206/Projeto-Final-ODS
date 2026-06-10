@@ -21,6 +21,8 @@ Path("documents").mkdir(exist_ok=True)
 
 semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 
+
+#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def load_newsletter_links():
     """Load newsletter links from file"""
     if not Path(INPUT_FILE).exists():
@@ -41,6 +43,8 @@ def load_newsletter_links():
 
     return links
 
+
+#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def load_existing_data():
     """Load existing newsletter content"""
     if Path(OUTPUT_FILE).exists():
@@ -48,6 +52,8 @@ def load_existing_data():
             return json.load(f)
     return {}
 
+
+#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def save_data(data):
     """Save newsletter content to file, sorted by publication date"""
     # Sort by publication date (newest first)
@@ -61,6 +67,8 @@ def save_data(data):
         json.dump(sorted_data, f, ensure_ascii=False, indent=2)
     print(f"Newsletter content saved! Total items: {len(sorted_data)}")
 
+
+#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 async def fetch(session, url):
     """Fetch page with retries"""
     for attempt in range(RETRIES):

@@ -8,7 +8,6 @@ import re
 import sys
 
 # Configuração
-CONCURRENT_BROWSERS = 1
 ITEMS_PER_FILE = 1000
 BATCH_SIZE = 100
 HEADLESS = True  # Muda para False para ver os browsers
