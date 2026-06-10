@@ -88,7 +88,7 @@ def format_newsletter_documents():
     formatted_docs = {}
 
     if not newsletter_file.exists():
-        print(f"⚠ Newsletter file not found: {newsletter_file}")
+        print(f"Newsletter file not found: {newsletter_file}")
         return formatted_docs
 
     with open(newsletter_file, "r", encoding="utf-8") as f:
@@ -138,7 +138,7 @@ def format_newsletter_documents():
                 }
                 total_items += 1
 
-    print(f"✓ Formatted {total_items} newsletter items")
+    print(f"Formatted {total_items} newsletter items")
     return formatted_docs
 
 
@@ -180,12 +180,12 @@ def format_scientific_repo_documents():
                     total_items += 1
                     file_items += 1
 
-            print(f"  ✓ {Path(repo_file).name}: {file_items} items")
+            print(f"{Path(repo_file).name}: {file_items} items")
 
         except Exception as e:
-            print(f"  ✗ Error processing {repo_file}: {e}")
+            print(f"Error processing {repo_file}: {e}")
 
-    print(f"✓ Formatted {total_items} scientific repository items")
+    print(f"Formatted {total_items} scientific repository items")
     return formatted_docs
 
 
@@ -210,11 +210,11 @@ def merge_and_save(newsletter_docs, repo_docs, api_docs, chunk_size=1000):
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(chunk, f, ensure_ascii=False, indent=2)
 
-        print(f"✓ Saved {len(chunk)} documents to {output_file}")
+        print(f"Saved {len(chunk)} documents to {output_file}")
 
         total_files += 1
 
-    print(f"\n✓ Saved {len(all_docs)} total documents across {total_files} files")
+    print(f"\nSaved {len(all_docs)} total documents across {total_files} files")
 
     return all_docs
 

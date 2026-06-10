@@ -13,6 +13,10 @@
     color: #333333;
 }
 
+.filter-label-with-button h2 {
+    margin-bottom: 0;
+}
+
 .filter-group {
     margin-bottom: 16px;
 }
@@ -60,6 +64,32 @@
     background-color: #d0d0d0;
 }
 
+.collapse-button {
+    padding: 6px 12px;
+    background-color: #f0f0f0;
+    color: #333333;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.collapse-button:hover {
+    background-color: #e0e0e0;
+    border-color: #999999;
+}
+
+.collapse-button:active {
+    background-color: #d0d0d0;
+}
+
+.ods-button-group {
+    display: flex;
+    gap: 8px;
+}
+
 .filter-input {
     width: 100%;
     padding: 10px 12px;
@@ -84,6 +114,12 @@
 }
 
 .ods-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.origem-checkboxes {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;

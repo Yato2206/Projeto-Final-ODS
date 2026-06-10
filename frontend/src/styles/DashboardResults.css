@@ -1,0 +1,16 @@
+.dashboard-results {
+    padding: 20px;
+}
+
+.gridItem {
+    background: #f5f5f5;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.gridItem h3 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    font-weight: 600;
+}

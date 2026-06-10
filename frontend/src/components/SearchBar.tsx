@@ -4,7 +4,7 @@ import OutputList from "./OutputList";
 import FilterPanel from "./FilterPanel";
 import { getNumberDocs } from "./Utilis";
 import {Result} from "../interfaces";
-import { Tipo , Ods } from "../types";
+import { Tipo , Ods , Origens } from "../types";
 import '../styles/SearchBar.css';
 
 const ITEMS_PER_PAGE = 10;
@@ -28,12 +28,14 @@ const availableOds: Ods[] = [
     "ODS 16 - Paz, Justiça e Instituições Eficazes",
     "ODS 17 - Parcerias para a Implementação dos Objetivos"
 ]
+const availableOrigens: Origens[] = ["Repositório Científico", "Newsletter", "Scopus"];
 
 type State = {
     minDate: string;
     maxDate: string;
     types: string[];
     ods: string[];
+    origens: string[];
 };
 
 type PendingFilters = {
@@ -41,11 +43,11 @@ type PendingFilters = {
     maxDate: string;
     types: string[];
     ods: string[];
+    origens: string[];
 };
 
 type Action =
-    | { type: "update-pending-filters"; minDate: string; maxDate: string; types: string[] }
-    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[] };
+    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[]; origens: string[] };
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
@@ -55,6 +57,7 @@ function reducer(state: State, action: Action): State {
                 maxDate: action.maxDate,
                 types: action.types,
                 ods: action.ods,
+                origens: action.origens,
             };
         default:
             return state;
@@ -66,6 +69,7 @@ const initialState: State = {
     maxDate: "",
     types: [],
     ods: [],
+    origens: [],
 };
 
 export function SearchBar() {
@@ -75,6 +79,7 @@ export function SearchBar() {
         maxDate: "",
         types: [],
         ods: [],
+        origens: [],
     });
     const [data, setData] = useState<Result[]>([]);
     const [filteredData, setFilteredData] = useState<Result[]>([]);
@@ -193,6 +198,13 @@ export function SearchBar() {
             );
         }
 
+        // Origin filter
+        if (state.origens && state.origens.length > 0) {
+            filtered = filtered.filter(item =>
+                item.origin && state.origens.includes(item.origin)
+            );
+        }
+
         setFilteredData(filtered);
         setCurrentPage(1);
     };
@@ -263,13 +275,21 @@ export function SearchBar() {
         });
     };
 
+    const handleOrigensChange = (origens: string[]) => {
+        setPendingFilters({
+            ...pendingFilters,
+            origens
+        });
+    };
+
     const handleApplyFilters = () => {
         dispatch({
             type: "apply-filters",
             minDate: pendingFilters.minDate,
             maxDate: pendingFilters.maxDate,
             types: pendingFilters.types,
-            ods: pendingFilters.ods
+            ods: pendingFilters.ods,
+            origens: pendingFilters.origens,
         });
     };
 
@@ -282,13 +302,16 @@ export function SearchBar() {
                 onMaxDateChange={handleMaxDateChange}
                 onTypesChange={handleTypesChange}
                 onOdsChange={handleOdsChange}
+                onOrigensChange={handleOrigensChange}
                 onApplyFilters={handleApplyFilters}
                 minDate={pendingFilters.minDate}
                 maxDate={pendingFilters.maxDate}
                 types={pendingFilters.types}
                 ods={pendingFilters.ods}
+                origens={pendingFilters.origens}
                 availableTypes={availableTypes}
                 availableOds={availableOds}
+                availableOrigens={availableOrigens}
                 buttonLabel="Aplicar Filtros"
                 yearRange={getYearRange()}
             />

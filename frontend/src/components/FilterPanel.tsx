@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 import '../styles/FilterPanel.css';
 
 interface FilterPanelProps {
@@ -6,32 +6,44 @@ interface FilterPanelProps {
     onMaxDateChange: (date: string) => void;
     onTypesChange: (types: string[]) => void;
     onOdsChange: (ods: string[]) => void;
+    onOrigensChange: (origens: string[]) => void;
     onApplyFilters: () => void;
     minDate: string;
     maxDate: string;
     types: string[];
     ods: string[];
+    origens: string[];
     availableTypes: string[];
     availableOds: string[];
+    availableOrigens: string[];
     buttonLabel?: string;
     yearRange?: { minYear: number; maxYear: number };
 }
+
+
 
 const FilterPanel: React.FC<FilterPanelProps> = ({
     onMinDateChange,
     onMaxDateChange,
     onTypesChange,
     onOdsChange,
+    onOrigensChange,
     onApplyFilters,
     minDate,
     maxDate,
     types,
     ods,
+    origens,
     availableTypes,
     availableOds,
+    availableOrigens,
     buttonLabel = "Aplicar Filtros",
     yearRange
 }) => {
+    const [isTypesExpanded, setIsTypesExpanded] = useState(true);
+    const [isOdsExpanded, setIsOdsExpanded] = useState(true);
+    const [isOrigensExpanded, setIsOrigensExpanded] = useState(true);
+    const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
 
     const getMaxMonthString = (): string => {
         const maxYear = yearRange?.maxYear || new Date().getFullYear();
@@ -45,11 +57,19 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     };
 
     const handleMinDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onMinDateChange(e.target.value);
+        const newMinDate = e.target.value;
+        // Only allow if maxDate is not set or if newMinDate is before or equal to maxDate
+        if (!maxDate || newMinDate <= maxDate) {
+            onMinDateChange(newMinDate);
+        }
     };
 
     const handleMaxDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onMaxDateChange(e.target.value);
+        const newMaxDate = e.target.value;
+        // Only allow if minDate is not set or if newMaxDate is after or equal to minDate
+        if (!minDate || newMaxDate >= minDate) {
+            onMaxDateChange(newMaxDate);
+        }
     };
 
     const handleTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,94 +98,166 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         onOdsChange(updatedOds);
     };
 
+    const handleOrigemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const origemValue = e.target.value;
+        let updatedOrigem: string[];
+
+        if (e.target.checked) {
+            updatedOrigem = [...origens, origemValue];
+        } else {
+            updatedOrigem = origens.filter(o => o !== origemValue);
+        }
+
+        onOrigensChange(updatedOrigem);
+    };
+
     const handleSelectAllOds = () => {
         if (ods.length === availableOds.length) {
-            // Deselect all
             onOdsChange([]);
         } else {
-            // Select all
             onOdsChange([...availableOds]);
         }
     };
 
     return (
         <div className="filter-panel">
-            <h2>Filtros</h2>
-
-            <div className="filter-group">
-                <label htmlFor="min-date">Data inicial (mês/ano):</label>
-                <input
-                    id="min-date"
-                    type="month"
-                    value={minDate}
-                    onChange={handleMinDateChange}
-                    className="filter-input"
-                    min={`${yearRange?.minYear || new Date().getFullYear() - 5}-01`}
-                    max={getMaxMonthString()}
-                />
+            <div className="filter-label-with-button">
+                <h2>Filtros</h2>
+                <button
+                    className="collapse-button"
+                    onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                >
+                    {isFiltersExpanded ? "Fechar Filtros" : "Abrir Filtros"}
+                </button>
             </div>
 
-            <div className="filter-group">
-                <label htmlFor="max-date">Data final (mês/ano):</label>
-                <input
-                    id="max-date"
-                    type="month"
-                    value={maxDate}
-                    onChange={handleMaxDateChange}
-                    className="filter-input"
-                    min={`${yearRange?.minYear || new Date().getFullYear() - 5}-01`}
-                    max={getMaxMonthString()}
-                />
-            </div>
+            {isFiltersExpanded && (
+                <div>
+                    <div className="filter-group">
+                        <label htmlFor="min-date">Data inicial (mês/ano):</label>
+                        <input
+                            id="min-date"
+                            type="month"
+                            value={minDate}
+                            onChange={handleMinDateChange}
+                            className="filter-input"
+                            min={`${yearRange?.minYear || new Date().getFullYear() - 5}-01`}
+                            max={maxDate || getMaxMonthString()}
+                        />
+                    </div>
 
-            <div className="filter-group">
-                <label>Tipo:</label>
-                <div className="type-checkboxes">
-                    {availableTypes.map(typeOption => (
-                        <div key={typeOption} className="checkbox-item">
-                            <input
-                                id={`type-${typeOption}`}
-                                type="checkbox"
-                                value={typeOption}
-                                checked={types.includes(typeOption)}
-                                onChange={handleTypeChange}
-                            />
-                            <label htmlFor={`type-${typeOption}`}>{typeOption}</label>
+                    <div className="filter-group">
+                        <label htmlFor="max-date">Data final (mês/ano):</label>
+                        <input
+                            id="max-date"
+                            type="month"
+                            value={maxDate}
+                            onChange={handleMaxDateChange}
+                            className="filter-input"
+                            min={minDate || `${yearRange?.minYear || new Date().getFullYear() - 5}-01`}
+                            max={getMaxMonthString()}
+                        />
+                    </div>
+
+                        <div className="filter-group">
+                            <div className="filter-label-with-button">
+                                <label>Tipo:</label>
+                                <button
+                                    className="collapse-button"
+                                    onClick={() => setIsTypesExpanded(!isTypesExpanded)}
+                                >
+                                    {isTypesExpanded ? "Fechar" : "Abrir"}
+                                </button>
+                            </div>
+                            {isTypesExpanded && (
+                                <div className="type-checkboxes">
+                                    {availableTypes.map(typeOption => (
+                                        <div key={typeOption} className="checkbox-item">
+                                            <input
+                                                id={`type-${typeOption}`}
+                                                type="checkbox"
+                                                value={typeOption}
+                                                checked={types.includes(typeOption)}
+                                                onChange={handleTypeChange}
+                                            />
+                                            <label htmlFor={`type-${typeOption}`}>{typeOption}</label>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    ))}
-                </div>
-            </div>
 
-            <div className="filter-group">
-                <div className="filter-label-with-button">
-                    <label>ODS:</label>
-                    <button 
-                        onClick={handleSelectAllOds}
-                        className="select-all-button"
-                        title={ods.length === availableOds.length ? "Desselecionar todos" : "Selecionar todos"}
-                    >
-                        {ods.length === availableOds.length ? "Desselecionar tudo" : "Selecionar tudo"}
+                        <div className="filter-group">
+                            <div className="filter-label-with-button">
+                                <label>ODS:</label>
+                                <div className="ods-button-group">
+                                    {isOdsExpanded && (
+                                        <button
+                                            className="select-all-button"
+                                            onClick={handleSelectAllOds}
+                                        >
+                                            {ods.length === availableOds.length ? "Limpar" : "Selecionar tudo"}
+                                        </button>
+                                    )}
+                                    <button
+                                        className="collapse-button"
+                                        onClick={() => setIsOdsExpanded(!isOdsExpanded)}
+                                    >
+                                        {isOdsExpanded ? "Fechar" : "Abrir" }
+                                    </button>
+                                </div>
+                            </div>
+                            {isOdsExpanded && (
+                                <div className="ods-checkboxes">
+                                    {availableOds.map(odsOption => (
+                                        <div key={odsOption} className="checkbox-item">
+                                            <input
+                                                id={`ods-${odsOption}`}
+                                                type="checkbox"
+                                                value={odsOption}
+                                                checked={ods.includes(odsOption)}
+                                                onChange={handleOdsChange}
+                                            />
+                                            <label htmlFor={`ods-${odsOption}`}>{odsOption}</label>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                    <div className="filter-group">
+                        <div className="filter-label-with-button">
+                            <label>Origem:</label>
+                            <button
+                                className="collapse-button"
+                                onClick={() => setIsOrigensExpanded(!isOrigensExpanded)}
+                            >
+                                {isOrigensExpanded ? "Fechar" : "Abrir"}
+                            </button>
+                        </div>
+                        {isOrigensExpanded && (
+                            <div className="origem-checkboxes">
+                                {availableOrigens.map(origemOption => (
+                                    <div key={origemOption} className="checkbox-item">
+                                        <input
+                                            id={`origem-${origemOption}`}
+                                            type="checkbox"
+                                            value={origemOption}
+                                            checked={origens.includes(origemOption)}
+                                            onChange={handleOrigemChange}
+                                        />
+                                        <label htmlFor={`origem-${origemOption}`}>{origemOption}</label>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <button onClick={onApplyFilters} className="apply-button">
+                        {buttonLabel}
                     </button>
                 </div>
-                <div className="ods-checkboxes">
-                    {availableOds.map(odsOption => (
-                        <div key={odsOption} className="checkbox-item">
-                            <input
-                                id={`ods-${odsOption}`}
-                                type="checkbox"
-                                value={odsOption}
-                                checked={ods.includes(odsOption)}
-                                onChange={handleOdsChange}
-                            />
-                            <label htmlFor={`ods-${odsOption}`}>{odsOption}</label>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <button onClick={onApplyFilters} className="apply-button">
-                {buttonLabel}
-            </button>
+            )}
         </div>
     );
 };

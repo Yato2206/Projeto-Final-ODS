@@ -18,3 +18,5 @@ export type Ods =
     "ODS 15 - Proteger a Vida Terrestre" |
     "ODS 16 - Paz, Justiça e Instituições Eficazes" |
     "ODS 17 - Parcerias para a Implementação dos Objetivos"
+
+export type Origens = "Repositório Científico" | "Newsletter" | "Scopus"

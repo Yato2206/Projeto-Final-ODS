@@ -3,8 +3,10 @@ import FilterPanel from "./FilterPanel";
 import {useEffect, useReducer, useState} from "react";
 import {Result} from "../interfaces";
 import { getNumberDocs } from "./Utilis";
-import { Tipo , Ods } from "../types";
+import { Tipo , Ods , Origens } from "../types";
+import * as XLSX from 'xlsx';
 import '../styles/Dashboard.css';
+import BarChartComponent from "./BarChart";
 
 const availableTypes: Tipo[] = ["Ação na sociedade", "Artístico", "Artigo científico", "Ensino", "Newsletter", "Outro"];
 const availableOds: Ods[] = [
@@ -26,12 +28,14 @@ const availableOds: Ods[] = [
     "ODS 16 - Paz, Justiça e Instituições Eficazes",
     "ODS 17 - Parcerias para a Implementação dos Objetivos"
 ]
+const availableOrigens: Origens[] = ["Repositório Científico", "Newsletter", "Scopus"];
 
 type State = {
     minDate: string;
     maxDate: string;
     types: string[];
     ods: string[];
+    origens: string[];
 };
 
 type PendingFilters = {
@@ -39,10 +43,11 @@ type PendingFilters = {
     maxDate: string;
     types: string[];
     ods: string[];
+    origens: string[];
 };
 
 type Action =
-    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[] };
+    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[]; origens: string[] };
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
@@ -52,6 +57,7 @@ function reducer(state: State, action: Action): State {
                 maxDate: action.maxDate,
                 types: action.types,
                 ods: action.ods,
+                origens: action.origens,
             };
         default:
             return state;
@@ -63,7 +69,17 @@ const initialState: State = {
     maxDate: "",
     types: [],
     ods: [],
+    origens: [],
 };
+
+function GridItem({ title, children }) {
+    return (
+        <div className="gridItem">
+            <h3>{title}</h3>
+            {children}
+        </div>
+    );
+}
 
 export function DashboardFilters() {
     const [state, dispatch] = useReducer(reducer, initialState);
@@ -72,9 +88,11 @@ export function DashboardFilters() {
         maxDate: "",
         types: [],
         ods: [],
+        origens: [],
     });
     const [data, setData] = useState<Result[]>([]);
     const [dashboardData, setDashboardData] = useState<any>(null);
+    const [filteredData, setFilteredData] = React.useState<Result[]>([]);
 
     // Calculate the year range (current year - 5 years to current year)
     const getYearRange = (): { minYear: number; maxYear: number } => {
@@ -179,15 +197,14 @@ export function DashboardFilters() {
         });
     };
 
-    const generateDashboard = () => {
-        // Apply the pending filters
-        dispatch({
-            type: "apply-filters",
-            minDate: pendingFilters.minDate,
-            maxDate: pendingFilters.maxDate,
-            types: pendingFilters.types,
-            ods: pendingFilters.ods
+    const handleOrigensChange = (origens: string[]) => {
+        setPendingFilters({
+            ...pendingFilters,
+            origens
         });
+    };
+
+    const generateDashboard = () => {
 
         let filtered = [...data];
 
@@ -228,6 +245,13 @@ export function DashboardFilters() {
             );
         }
 
+        // Origin filter
+        if (pendingFilters.origens && pendingFilters.origens.length > 0) {
+            filtered = filtered.filter(item =>
+                item.origin && pendingFilters.origens.includes(item.origin)
+            );
+        }
+
         // Count items per ODS
         const odsCount: { [key: string]: number } = {};
         pendingFilters.ods.forEach(ods => {
@@ -245,7 +269,7 @@ export function DashboardFilters() {
         });
 
         // Convert to chart format and sort by ODS number
-        const chartData = Object.entries(odsCount)
+        const chartData: Array<{ name: string; count: number }> = Object.entries(odsCount)
             .map(([ods, count]) => ({
                 name: ods,
                 count: count
@@ -256,17 +280,53 @@ export function DashboardFilters() {
                 return numA - numB;
             });
 
+        // Apply the pending filters
+        dispatch({
+            type: "apply-filters",
+            minDate: pendingFilters.minDate,
+            maxDate: pendingFilters.maxDate,
+            types: pendingFilters.types,
+            ods: pendingFilters.ods,
+            origens: pendingFilters.origens,
+        });
+
+        setFilteredData(filtered);
+
         setDashboardData({
             filters: {
                 minDate: pendingFilters.minDate,
                 maxDate: pendingFilters.maxDate,
                 types: pendingFilters.types,
                 ods: pendingFilters.ods,
+                origens: pendingFilters.origens,
             },
             totalItems: filtered.length,
             chartData: chartData
         });
     };
+
+    const handleExport = () => {
+        const exportData = filteredData.map(item => ({
+            "Título": item.name,
+            "Tipo": item.type,
+            "Origem": item.origin,
+            "ODS": item.ods.join("; "),
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, "Documentos");
+
+        const width = [
+            { wch: 100 },  // Título
+            { wch: 15 },   // Tipo
+            { wch: 20 },   // Origem
+            { wch: 5 },    // ODS
+        ];
+        ws['!cols'] = width;
+
+        XLSX.writeFile(wb, `Dashboard_ODS.xlsx`);
+    }
 
     return (
         <div className="dashboard-container">
@@ -277,13 +337,16 @@ export function DashboardFilters() {
                 onMaxDateChange={handleMaxDateChange}
                 onTypesChange={handleTypesChange}
                 onOdsChange={handleOdsChange}
+                onOrigensChange={handleOrigensChange}
                 onApplyFilters={generateDashboard}
                 minDate={pendingFilters.minDate}
                 maxDate={pendingFilters.maxDate}
                 types={pendingFilters.types}
                 ods={pendingFilters.ods}
+                origens={pendingFilters.origens}
                 availableTypes={availableTypes}
                 availableOds={availableOds}
+                availableOrigens={availableOrigens}
                 buttonLabel="Gerar Dashboard"
                 yearRange={getYearRange()}
             />
@@ -321,8 +384,8 @@ export function DashboardFilters() {
                                         <div className="chart-bar-label">{item.name}</div>
                                         <div className="chart-bar-wrapper">
                                             {item.count > 0 && (
-                                                <div 
-                                                    className="chart-bar" 
+                                                <div
+                                                    className="chart-bar"
                                                     style={{
                                                         width: `${(item.count / Math.max(...dashboardData.chartData.filter((d: any) => d.count > 0).map((d: any) => d.count), 1)) * 100}%`
                                                     }}
@@ -339,9 +402,24 @@ export function DashboardFilters() {
 
                     {(!dashboardData.chartData || dashboardData.chartData.length === 0) && (
                         <div className="dashboard-empty">
-                            <p>Nenhum dado disponível para os filtros selecionados.</p>
+                            <p>Nenhum dado disponível para os filtros selecionados. (Selecione pelo menos 1 ODS)</p>
                         </div>
                     )}
+
+                    <div className="dashboard-results">
+                        <GridItem title="Bar Chart">
+                            <BarChartComponent data={dashboardData.chartData}/>
+                        </GridItem>
+                    </div>
+
+                    <button>
+                        Criar Imagem
+                    </button>
+
+                    <button onClick={handleExport}>
+                        Exportar
+                    </button>
+
                 </div>
             )}
 
