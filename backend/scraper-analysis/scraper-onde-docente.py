@@ -9,8 +9,19 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 #Provavelmente sera partilhado
-escolas = ["ESD", "ESELX", "ESML", "ESTC", "ESSL", "ISCAL", "ISEL"]
-#escolas = ["ESML"]
+escolas = ["ESCS", "ESD", "ESELX", "ESML", "ESTC", "ESSL", "ISCAL", "ISEL"]
+#escolas = ["ESCS"]
+
+ESCS_DEPARTAMENTOS = [
+    "audiovisual-e-multimedia",
+    "ciencias-da-comunicacao",
+    "ciencias-humanas",
+    "ciencias-sociais",
+    "estatistica",
+    "media-e-jornalismo",
+    "publicidade-e-marketing",
+    "relacoes-publicas-e-comunicacao-organizacional",
+]
 
 OUTPUT_FILE = "escolas/departamentos.json"
 RETRIES = 3
@@ -68,7 +79,6 @@ def fetch(url):
 
 """
     o ESD, o ESTC, ESSL e o ISCAL não possuem uma secção de departamento como as demais escolas para poder depois buscar os docentes por departamento
-
 """
 def choose_departamento_parse_html(html, escola):
     """Parse page and extract newsletter items"""
@@ -181,12 +191,24 @@ def _print_summary(existing_data, all_news):
     print(f"Total items: {len(all_news)}")
     print(f"{'='*50}")
 
+
+#    o ESCS é um caso especial. Apesar de possuir departamentos, não é possível realizar o scrape desses departamentos, pelo que têm de ser
+#    fornecidos diretamente.
 def scrape_departamentos(escola):
     """Scrape departamentos for all schools"""
     existing_data = load_existing_data()
     print(f"Loaded {len(existing_data)} existing items")
 
     all_deps = dict(existing_data)
+
+    if escola == "ESCS":
+        for dep in ESCS_DEPARTAMENTOS:
+            all_deps[dep] = {
+                "escola": escola,
+                "link": f"https://www.escs.ipl.pt/escola/departamentos/{dep}",
+                "dateChecked": datetime.now().isoformat()
+            }
+        print(f"  [Sequential] {len(ESCS_DEPARTAMENTOS)} items added for ESCS")
 
     _scrape_sequential(escola, existing_data, all_deps)
 

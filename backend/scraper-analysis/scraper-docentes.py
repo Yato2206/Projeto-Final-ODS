@@ -12,13 +12,13 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 # Schools can be processed one by one. Keep this list aligned with the current scrape scope.
-escolas = ["ESD", "ESELX", "ESML", "ESTC", "ESSL", "ISCAL", "ISEL"]
-#escolas = ["ISEL"]
+escolas = ["ESCS", "ESD", "ESELX", "ESML", "ESTC", "ESSL", "ISCAL", "ISEL"]
+#escolas = ["ESCS"]
 
 INPUT_FILE = "escolas/departamentos.json"
 OUTPUT_FILE = "escolas/docentes.json"
 RETRIES = 3
-HTTP_REQUESTS_CONCURRENT  = 5 
+MAX_CONCURRENT  = 5 
 MAX_PER_PAGE_ISCAL = 10
 MAX_PER_PAGE_ISEL = 51
 START_PAGE = 0
@@ -45,6 +45,7 @@ PAGINATED_SCHOOLS = {
 }
 
 LINK_TRANSFORMS = {
+    "ESCS": lambda link: link,
     "ESELX": lambda link: link,
     "ESML": lambda link: link,
     "ISEL": lambda link: link + "/docentes?page=",
@@ -55,6 +56,7 @@ LINK_TRANSFORMS = {
 }
 
 BASE_URLS: dict[str, str] = {
+    "ESCS": "https://www.escs.ipl.pt",
     "ESD":   "https://www.esd.ipl.pt",
     "ESELX": "https://www.eselx.ipl.pt",
     "ESML":  "https://www.esml.ipl.pt",
@@ -66,6 +68,7 @@ BASE_URLS: dict[str, str] = {
 
 #seletores CSS para achar os docentes de cada escola
 SELECTORS: dict[str, str] = {
+    "ESCS": ".item div",
     "ESD":   ".content-main span",
     "ESELX": ".container-bg div",
     "ESML":  ".t3-content h2",
@@ -74,8 +77,6 @@ SELECTORS: dict[str, str] = {
     "ISCAL": ".mt-5 tr",
     "ISEL":  ".gva-view-grid span",
 }
-
-semaphore = asyncio.Semaphore(HTTP_REQUESTS_CONCURRENT)
 REQUEST_TIMEOUT = 10
 
 def _load_json(path):
@@ -127,7 +128,7 @@ def load_existing_data(escola):
 #================================================
 # HTTP
 #================================================
-async def fetch(session, url, escola):
+async def fetch(session, semaphore, url, escola):
     """Fetch page with retries."""
     for attempt in range(RETRIES):
         try:
@@ -140,7 +141,6 @@ async def fetch(session, url, escola):
                 await asyncio.sleep(2 ** attempt)
             else:
                 print(f"[{escola}] Failed to fetch {url}: {e}")
-                return None
     return None
 
 
@@ -154,6 +154,9 @@ def _parse_element(element, escola):
  
     if escola == "ESSL":
         nome_elem = element.select_one("td")
+    elif escola == "ESCS":
+        nome_elem = element.select_one(".views-field.views-field-view-node a")
+        #print(f"nome_elem: {nome_elem}")
     else:
         nome_elem = element.select_one("a")
  
@@ -161,10 +164,15 @@ def _parse_element(element, escola):
         return None
  
     nome = nome_elem.get_text(strip=True)
-    if not nome:
+    #CASO ESPECIAL NO ESELX
+    if not nome or "Departamento" in nome:
         return None
- 
-    # CASO ESPECIAL ATE ARRANAJR UMA MANEIRA MELHOR DE SE RESOLVER
+    #CASO ESPECIAL ESCS    
+    if escola == "ESCS":
+        nome_span = element.select_one(".views-field.views-field-title span")
+        nome = nome_span.get_text(strip=True) if nome_span else nome
+        #print(f"dfndnd {nome}")
+    # CASO ESPECIAL ATE ARRANJAR UMA MANEIRA MELHOR DE SE RESOLVER
     if escola == "ESSL":
         tag_a = element.select_one("a")
         href  = tag_a.get("href") if tag_a else None
@@ -198,6 +206,7 @@ def parse_docentes(html, escola):
  
     docentes: dict = {}
     for element in items:
+        #print(element)
         result = _parse_element(element, escola)
         if result:
             nome, record = result
@@ -248,13 +257,13 @@ def build_link_sources(escola: str) -> list[dict]:
 # Faz fetch das paginas comecando em *start_page* até encontra uma página com menos items que *max_per_page*
 # Os resultados são colocados em *accumulated*
 # Retorna o numero de items novos encontrados
-async def scrape_paginated_source(session, escola, page_url, max_per_page, accumulated, start_page = START_PAGE, source_title = None):
+async def scrape_paginated_source(session, semaphore, escola, page_url, max_per_page, accumulated, start_page = START_PAGE, source_title = None):
     page = start_page
     new_items = 0
 
     while True:
         url = f"{page_url}{page}"
-        html = await fetch(session, url, escola)
+        html = await fetch(session, semaphore, url, escola)
         if not html:
             print(f"[{escola}] No content on page {page}")
             break
@@ -286,7 +295,7 @@ async def scrape_paginated_source(session, escola, page_url, max_per_page, accum
 #================================================
 
 # Faz scrape de uma escola end-to-end. Não escreve nada no ficheiro, apenas retorna os dados encontrados.
-async def scrape_escola(session, escola):
+async def scrape_escola(session, semaphore, escola):
     existing_data = load_existing_data(escola)
     if escola in PAGINATED_SCHOOLS:
         print(f"\n{'='*50}")
@@ -303,7 +312,7 @@ async def scrape_escola(session, escola):
 
             tasks = [
                 scrape_paginated_source(
-                    session, escola,
+                    session, semaphore, escola,
                     source["link"], config["max_per_page"],
                     accumulated, START_PAGE, source.get("title"),
                 )
@@ -314,7 +323,7 @@ async def scrape_escola(session, escola):
             print(f"[{escola}] New items: {total_new_items}")
         else:
             new_items = await scrape_paginated_source(
-                session, escola,
+                session, semaphore, escola,
                 config["page_url"], config["max_per_page"],
                 accumulated, START_PAGE
             )
@@ -330,7 +339,7 @@ async def scrape_escola(session, escola):
 
     existent_keys = set(existing_data.keys())
 
-    results = await asyncio.gather(*[_scrape_one(session, escola, source, existent_keys) for source in link_sources])
+    results = await asyncio.gather(*[_scrape_one(session, semaphore, escola, source, existent_keys) for source in link_sources])
 
     all_data = dict(existing_data)
     for chunk in results:
@@ -340,7 +349,7 @@ async def scrape_escola(session, escola):
     print(f"\n[{escola}] Completed")
     return all_data
 
-async def _scrape_one(session, escola, link_info, existent_keys):
+async def _scrape_one(session, semaphore, escola, link_info, existent_keys):
     url = link_info["link"]
     key = f"{escola}::{link_info.get('title') or url}"
  
@@ -349,7 +358,7 @@ async def _scrape_one(session, escola, link_info, existent_keys):
         return {}
  
     print(f"[{escola}] Scraping {url}...")
-    html = await fetch(session, url, escola)
+    html = await fetch(session, semaphore, url, escola)
     if not html:
         return {}
  
@@ -364,12 +373,14 @@ async def main():
     print(f"\n{'='*50}")
     print("Docentes Scraper")
     print(f"{'='*50}\n")
+    
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT)
 
-    connector = aiohttp.TCPConnector(limit=HTTP_REQUESTS_CONCURRENT)
+    connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT)
     headers   = {"User-Agent": "Mozilla/5.0"}
  
     async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
-        tasks   = [scrape_escola(session, escola) for escola in escolas]
+        tasks   = [scrape_escola(session, semaphore, escola) for escola in escolas]
         results = await asyncio.gather(*tasks)
     merged: dict = {}
     for chunk in results:
