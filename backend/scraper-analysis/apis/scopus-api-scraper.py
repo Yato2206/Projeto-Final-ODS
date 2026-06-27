@@ -2,6 +2,7 @@ import os
 import traceback
 from pybliometrics.scopus import ScopusSearch, AbstractRetrieval
 import json
+from pathlib import Path
 from tqdm import tqdm
 import time
 import logging
@@ -10,6 +11,10 @@ from datetime import datetime
 # Configure logging
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+DOCUMENTS_DIR = Path("documents")
+
+def get_prev_data_count():
+    return len(list(DOCUMENTS_DIR.glob("scopus_*_*.json")))
 
 # NOTE: config file for pybliometrics is stored in $HOME/.config/pybliometrics.cfg
 
@@ -18,10 +23,19 @@ if __name__ == "__main__":
     import pybliometrics
     #logger.info("Initializing pybliometrics...")
     pybliometrics.scopus.init()
+    #print(pybliometrics.utils.constants.CONFIG_FILE)
     #logger.info("Pybliometrics initialized successfully")
+    existe_files = get_prev_data_count()
+    print(f"Number of existing files: {existe_files}")
 
     CURRENT_YEAR = datetime.now().year
-    FIRST_YEAR = CURRENT_YEAR - 5 # pegar os ultimos 5 anos de publicações
+    if (existe_files > 0):
+        FIRST_YEAR = CURRENT_YEAR # pegar apenas as publicacções do ano atual, de modo a poupar tokens
+    else:
+        FIRST_YEAR = CURRENT_YEAR - 5 # pegar os ultimos 5 anos de publicações, já que não foram feitas pesquisas antes
+    
+    PERIOD_TO_SEARCH = 7 # valor em dias para definir quando faz uma pesquisa ao scopus, em vez de pegar os dados da cache
+                         # por defeito, serão 7 dias (uma semana) para atualizar, gastanto tokens apenas 1 vez por semana 
 
     # begin script
     for year in range(FIRST_YEAR, CURRENT_YEAR + 1):    #o segundo parametro da funcao range nao conta, 
@@ -37,9 +51,10 @@ if __name__ == "__main__":
         # get the results
         #logger.info(f"Starting ScopusSearch for year {year}...")
         start_time = time.time()
+        #f'ABS ( "data mining" ) OR ABS ( "machine learning" ) OR TITLE ( "data mining" ) OR TITLE ( "machine learning" ) AND TITLE ( "material" ) OR ABS ( "material" ) OR SRCTITLE ( "material" ) AND SUBJAREA ( mate ) AND DOCTYPE ( "AR" ) AND SRCTYPE( j ) AND PUBYEAR = {year} AND NOT SUBJAREA (medi ) AND NOT SUBJAREA ( immu ) AND NOT SUBJAREA ( BIOC ) AND NOT SUBJAREA ( busi )',
         x = ScopusSearch(
             f'PUBYEAR = {year} AND ( LIMIT-TO ( LANGUAGE , "English" ) OR LIMIT-TO ( LANGUAGE , "Portuguese" ) ) AND ( AF-ID ( "60018688" ) OR AF-ID ( "60019813" ) OR AF-ID ( "60079659" ) OR AF-ID ( "60285972" ) )',
-            #f'ABS ( "data mining" ) OR ABS ( "machine learning" ) OR TITLE ( "data mining" ) OR TITLE ( "machine learning" ) AND TITLE ( "material" ) OR ABS ( "material" ) OR SRCTITLE ( "material" ) AND SUBJAREA ( mate ) AND DOCTYPE ( "AR" ) AND SRCTYPE( j ) AND PUBYEAR = {year} AND NOT SUBJAREA (medi ) AND NOT SUBJAREA ( immu ) AND NOT SUBJAREA ( BIOC ) AND NOT SUBJAREA ( busi )',
+            refresh=PERIOD_TO_SEARCH,
             view="COMPLETE")
         elapsed_time = time.time() - start_time
         #logger.info(f"ScopusSearch completed in {elapsed_time:.2f}s. Year: {year}, Results count: {len(x.results)}")
