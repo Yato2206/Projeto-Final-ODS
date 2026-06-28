@@ -59,7 +59,7 @@ def save_data(data):
     # Sort by publication date (newest first)
     sorted_data = dict(sorted(
         data.items(),
-        key=lambda x: x[1].get("dataPublicacao", ""),
+        key=lambda x: x[1].get("dataPublicacao") or "",
         reverse=True
     ))
 
@@ -91,7 +91,8 @@ def extract_newsletter_id(url):
     """Extract newsletter ID from URL"""
     parsed = urlparse(url)
     parts = parsed.path.split("/")
-    return parts[-1] if parts else "unknown"
+    last_part = parts[-1] if parts else ""
+    return last_part if last_part and last_part[-1].isdigit() else "unknown"
 
 def parse_newsletter_content(html, newsletter_id, data_publicacao, link):
     """Parse newsletter HTML and extract content"""
@@ -206,6 +207,11 @@ async def scrape_newsletters_parallel(links, num_scrapers=NUM_SCRAPERS, force_fu
     print(f"Loaded {len(previous_data)} existing items")
 
     all_data = {} if force_full else dict(previous_data)
+
+    if not links:
+        print("No links to scrape.")
+        save_data(all_data)   # garante que o ficheiro fica gravado mesmo sem novos links (ex.: vazio, se force_full)
+        return
 
     # Split links into chunks for parallel scrapers
     chunk_size = (len(links) + num_scrapers - 1) // num_scrapers

@@ -86,7 +86,6 @@ def parse_page(html):
 
     return news
 
-
 def _scrape_sequential(start_page, existing_data, all_news_shared, prefix="[Sequential]"):
     """Core sequential scraping logic"""
     page = start_page
