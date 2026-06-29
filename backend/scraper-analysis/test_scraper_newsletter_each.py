@@ -191,7 +191,6 @@ def test_parse_newsletter_content_campo_aberto_ausente():
     assert resultado["noticias"] == []
 
 def test_parse_newsletter_content_campo_aberto_para_em_elemento_nao_h2_nem_p():
-    """Confirma que find_next_siblings ignora ou pára correctamente noutro tipo de tag."""
     html = """
     <div class="content-main">
         <div class="title-body"><h1>T</h1></div>
