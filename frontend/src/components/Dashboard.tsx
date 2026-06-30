@@ -1,12 +1,15 @@
 import React from "react"
 import FilterPanel from "./FilterPanel";
-import {useEffect, useReducer, useState} from "react";
+import {useEffect, useReducer, useState, useRef} from "react";
+import { toPng } from "html-to-image";
 import {Result} from "../interfaces";
 import { getNumberDocs } from "./Utilis";
 import { Tipo , Ods , Origens } from "../types";
 import * as XLSX from 'xlsx';
 import '../styles/Dashboard.css';
 import BarChartComponent from "./BarChart";
+import AreaChartComponent from "./PieChart";
+import OvertimeChart from "./OvertimeChart";
 
 const availableTypes: Tipo[] = ["Ação na sociedade", "Artístico", "Artigo científico", "Ensino", "Newsletter", "Outro"];
 const availableOds: Ods[] = [
@@ -81,7 +84,7 @@ function GridItem({ title, children }) {
     );
 }
 
-export function DashboardFilters() {
+export function DashboardScreen() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const [pendingFilters, setPendingFilters] = useState<PendingFilters>({
         minDate: "",
@@ -93,6 +96,9 @@ export function DashboardFilters() {
     const [data, setData] = useState<Result[]>([]);
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [filteredData, setFilteredData] = React.useState<Result[]>([]);
+    const barchartRef = useRef();
+    const timechartRef = useRef();
+    const piechartRef = useRef();
 
     // Calculate the year range (current year - 5 years to current year)
     const getYearRange = (): { minYear: number; maxYear: number } => {
@@ -204,7 +210,7 @@ export function DashboardFilters() {
         });
     };
 
-    const generateDashboard = () => {
+    const generateDashboards = () => {
 
         let filtered = [...data];
 
@@ -268,7 +274,7 @@ export function DashboardFilters() {
             }
         });
 
-        // Convert to chart format and sort by ODS number
+        // Data for the Total Contributions by ODS Chart and Pie Chart
         const chartData: Array<{ name: string; count: number }> = Object.entries(odsCount)
             .map(([ods, count]) => ({
                 name: ods,
@@ -280,7 +286,38 @@ export function DashboardFilters() {
                 return numA - numB;
             });
 
-        // Apply the pending filters
+
+        // Data for the Total Contributions by Month Chart
+        const monthlyCount: { [key: string]: number } = {};
+        const monthlyData: Array<{ month: string; totalCount: number; date: string ; eachCount: number }> = [];
+
+        filtered.forEach(item => {
+            try {
+                const itemDate = new Date(item.date);
+                const year = itemDate.getFullYear();
+                const month = String(itemDate.getMonth() + 1).padStart(2, '0');
+                const monthKey = `${year}-${month}`;
+
+                monthlyCount[monthKey] = (monthlyCount[monthKey] || 0) + 1;
+            } catch (error) {
+                console.error('Error parsing date:', item.date);
+            }
+        });
+
+        Object.entries(monthlyCount)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .forEach(([monthKey, totalCount]) => {
+                const [year, month] = monthKey.split('-');
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthName = monthNames[parseInt(month) - 1];
+                monthlyData.push({
+                    month: `${monthName} ${year}`,
+                    totalCount: totalCount,
+                    date: monthKey,
+                    eachCount: chartData.count
+                });
+            });
+
         dispatch({
             type: "apply-filters",
             minDate: pendingFilters.minDate,
@@ -301,7 +338,8 @@ export function DashboardFilters() {
                 origens: pendingFilters.origens,
             },
             totalItems: filtered.length,
-            chartData: chartData
+            chartData: chartData,
+            monthlyData: monthlyData
         });
     };
 
@@ -328,6 +366,18 @@ export function DashboardFilters() {
         XLSX.writeFile(wb, `Dashboard_ODS.xlsx`);
     }
 
+    const handleDownload = (ref, filename) => {
+        toPng(ref.current, { backgroundColor: '#ffffff' })
+            .then((dataUrl) => {
+                const link = document.createElement('a')
+                link.download = filename;
+                link.href = dataUrl;
+                link.click();
+            }).catch((error) => {
+            console.error("Error exporting image:", error);
+            });
+    };
+
     return (
         <div className="dashboard-container">
             <h1>Dashboard de Análise</h1>
@@ -338,7 +388,7 @@ export function DashboardFilters() {
                 onTypesChange={handleTypesChange}
                 onOdsChange={handleOdsChange}
                 onOrigensChange={handleOrigensChange}
-                onApplyFilters={generateDashboard}
+                onApplyFilters={generateDashboards}
                 minDate={pendingFilters.minDate}
                 maxDate={pendingFilters.maxDate}
                 types={pendingFilters.types}
@@ -372,54 +422,68 @@ export function DashboardFilters() {
                                     <span className="info-value">{dashboardData.filters.maxDate}</span>
                                 </div>
                             )}
+
+                            <button onClick={handleExport}>
+                                Exportar
+                            </button>
                         </div>
                     </div>
 
-                    {dashboardData.chartData && dashboardData.chartData.length > 0 && (
-                        <div className="dashboard-chart">
-                            <h2>Documentos por ODS</h2>
-                            <div className="chart-container">
-                                {dashboardData.chartData.map((item: any) => (
-                                    <div key={item.name} className="chart-bar-item">
-                                        <div className="chart-bar-label">{item.name}</div>
-                                        <div className="chart-bar-wrapper">
-                                            {item.count > 0 && (
-                                                <div
-                                                    className="chart-bar"
-                                                    style={{
-                                                        width: `${(item.count / Math.max(...dashboardData.chartData.filter((d: any) => d.count > 0).map((d: any) => d.count), 1)) * 100}%`
-                                                    }}
-                                                >
-                                                    <span className="chart-bar-value">{item.count}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {(!dashboardData.chartData || dashboardData.chartData.length === 0) && (
-                        <div className="dashboard-empty">
-                            <p>Nenhum dado disponível para os filtros selecionados. (Selecione pelo menos 1 ODS)</p>
-                        </div>
-                    )}
 
                     <div className="dashboard-results">
-                        <GridItem title="Bar Chart">
-                            <BarChartComponent data={dashboardData.chartData}/>
-                        </GridItem>
+                        <div>
+                            <div ref={barchartRef}>
+                                <GridItem title="Contribuições aos ODS">
+                                    <BarChartComponent data={dashboardData.chartData}/>
+                                </GridItem>
+
+                                <div className="info-grid">
+                                    <div className="info-card">
+                                        <span className="info-label">Total de Documentos:</span>
+                                        <span className="info-value">{dashboardData.totalItems}</span>
+                                    </div>
+
+                                    <div className="info-card">
+                                        <span className="info-label">Tipos de Documentos:</span>
+                                        <span className="info-value">{dashboardData.filters.types}</span>
+                                    </div>
+
+                                    <div className="info-card">
+                                        <span className="info-label">Total de Documentos:</span>
+                                        <span className="info-value">{dashboardData.totalItems}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onClick={() => handleDownload(barchartRef, "barChartODS.png") }>
+                                Download PNG
+                            </button>
+                        </div>
+
+                        <div>
+                            <div ref={timechartRef}>
+                                <GridItem title="Contribuições aos ODS por Mês">
+                                    <OvertimeChart data={dashboardData.monthlyData} />
+                                </GridItem>
+                            </div>
+
+                            <button onClick={() => handleDownload(timechartRef, "timeChartODS.png") }>
+                                Download PNG
+                            </button>
+                        </div>
+
+                        <div>
+                            <div ref={piechartRef}>
+                                <GridItem title="Percentagens de Contribuições">
+                                    <AreaChartComponent data={dashboardData.chartData}/>
+                                </GridItem>
+                            </div>
+
+                            <button onClick={() => handleDownload(piechartRef, "pieChartODS.png") }>
+                                Download PNG
+                            </button>
+                        </div>
                     </div>
-
-                    <button>
-                        Criar Imagem
-                    </button>
-
-                    <button onClick={handleExport}>
-                        Exportar
-                    </button>
-
                 </div>
             )}
 

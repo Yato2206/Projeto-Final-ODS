@@ -84,6 +84,11 @@
 .collapse-button:active {
     background-color: #d0d0d0;
 }
+.type-button-group {
+    display: flex;
+    gap: 8px;
+}
+
 
 .ods-button-group {
     display: flex;
@@ -204,3 +209,61 @@
     }
 }
 
+.container {
+    --color: #a5a5b0;
+    --size: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    font-size: var(--size);
+    user-select: none;
+    fill: var(--color);
+
+    width: var(--size);
+    height: var(--size);
+}
+
+.container .chevron-down {
+    position: absolute;
+    animation: keyframes-return .5s;
+
+    width: var(--size);
+    height: var(--size);
+}
+
+.container input:checked ~ .chevron-down {
+    animation: keyframes-rotate .5s;
+    transform: rotate(-180deg);
+}
+
+.container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+@keyframes keyframes-rotate {
+    0% {
+        transform: rotate(0deg);
+        opacity: 0;
+    }
+
+    100% {
+        transform: rotate(-180deg);
+    }
+}
+
+@keyframes keyframes-return {
+    0% {
+        transform: rotate(-180deg);
+        opacity: 0;
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
+}

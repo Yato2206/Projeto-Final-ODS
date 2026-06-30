@@ -84,6 +84,7 @@ export function SearchBar() {
     const [data, setData] = useState<Result[]>([]);
     const [filteredData, setFilteredData] = useState<Result[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [inputPage, setInputPage] = useState("");
 
     // Calculate the year range (current year - 5 years to current year)
     const getYearRange = (): { minYear: number; maxYear: number } => {
@@ -219,9 +220,33 @@ export function SearchBar() {
         return Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     };
 
+    const handleFirstPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(1);
+        }
+    };
+
     const handlePreviousPage = () => {
         if (currentPage > 1) {
             setCurrentPage(currentPage - 1);
+        }
+    };
+
+    const handlePageChange = (pageNumber: number) => {
+        setCurrentPage(pageNumber);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            const pageNum = parseInt(inputPage, 10);
+            const totalPages = getTotalPages();
+
+            if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                handlePageChange(pageNum);
+                setInputPage(""); // Optional: clear input after submitting
+            } else {
+                alert(`Please enter a valid page between 1 and ${totalPages}`);
+            }
         }
     };
 
@@ -230,6 +255,13 @@ export function SearchBar() {
             setCurrentPage(currentPage + 1);
         }
     };
+
+    const handleLastPage = () => {
+        if (currentPage < getTotalPages()) {
+            setCurrentPage(getTotalPages());
+        }
+    };
+
 
     useEffect(() => {
         fetchDocumentsData();
@@ -322,25 +354,58 @@ export function SearchBar() {
                 
                 {getTotalPages() > 1 && (
                     <div className="pagination-controls">
+
+                        <button
+                            onClick={handleFirstPage}
+                            disabled={currentPage === 1}
+                            className="pagination-button"
+                            title="Página anterior"
+                        >
+                            ˂˂
+                        </button>
+
                         <button
                             onClick={handlePreviousPage}
                             disabled={currentPage === 1}
                             className="pagination-button"
                             title="Página anterior"
                         >
-                            ← Anterior
+                            ˂ Anterior
                         </button>
+
                         <span className="pagination-info">
-                            Página {currentPage} de {getTotalPages()}
+                            Página
+                            <input
+                                type="number"
+                                className="page-input"
+                                min="1"
+                                max={getTotalPages()}
+                                value={inputPage}
+                                placeholder={currentPage.toString()}
+                                onChange={(e) => setInputPage(Number(e.target.value))}
+                                onKeyDown={handleKeyDown}
+                            />
+                            de {getTotalPages()}
                         </span>
+
                         <button
                             onClick={handleNextPage}
                             disabled={currentPage === getTotalPages()}
                             className="pagination-button"
                             title="Próxima página"
                         >
-                            Próxima →
+                            Próxima ˃
                         </button>
+
+                        <button
+                            onClick={handleLastPage}
+                            disabled={currentPage === getTotalPages()}
+                            className="pagination-button"
+                            title="Próxima página"
+                        >
+                            ˃˃
+                        </button>
+
                     </div>
                 )}
             </div>

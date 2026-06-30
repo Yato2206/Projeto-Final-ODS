@@ -20,8 +20,6 @@ interface FilterPanelProps {
     yearRange?: { minYear: number; maxYear: number };
 }
 
-
-
 const FilterPanel: React.FC<FilterPanelProps> = ({
     onMinDateChange,
     onMaxDateChange,
@@ -111,6 +109,14 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         onOrigensChange(updatedOrigem);
     };
 
+    const handleSelectAllTypes = () => {
+        if (types.length === availableTypes.length) {
+            onTypesChange([]);
+        } else {
+            onTypesChange([...availableTypes]);
+        }
+    };
+
     const handleSelectAllOds = () => {
         if (ods.length === availableOds.length) {
             onOdsChange([]);
@@ -123,12 +129,20 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         <div className="filter-panel">
             <div className="filter-label-with-button">
                 <h2>Filtros</h2>
-                <button
-                    className="collapse-button"
-                    onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-                >
-                    {isFiltersExpanded ? "Fechar Filtros" : "Abrir Filtros"}
-                </button>
+                <label className="container">
+                    <input
+                        type="checkbox"
+                        checked={isFiltersExpanded}
+                        onChange={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                    />
+
+                    <svg viewBox="0 0 512 512" height="1em" xmlns="http://www.w3.org/2000/svg"
+                         className="chevron-down">
+                        <path
+                            d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+                    </svg>
+
+                </label>
             </div>
 
             {isFiltersExpanded && (
@@ -162,13 +176,28 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                         <div className="filter-group">
                             <div className="filter-label-with-button">
                                 <label>Tipo:</label>
-                                <button
-                                    className="collapse-button"
-                                    onClick={() => setIsTypesExpanded(!isTypesExpanded)}
-                                >
-                                    {isTypesExpanded ? "Fechar" : "Abrir"}
-                                </button>
+                                <div className="type-button-group">
+                                    {isTypesExpanded && (
+                                        <button
+                                            className="select-all-button"
+                                            onClick={handleSelectAllTypes}
+                                        >
+                                            {types.length === availableTypes.length ? "Limpar" : "Selecionar tudo"}
+                                        </button>
+                                    )}
+                                    <label className="container">
+                                        <input
+                                            type="checkbox"
+                                            checked={isTypesExpanded}
+                                            onChange={() => setIsTypesExpanded(!isTypesExpanded)}
+                                        />
+                                        <svg viewBox="0 0 512 512" height="1em" xmlns="http://www.w3.org/2000/svg" className="chevron-down">
+                                            <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+                                        </svg>
+                                    </label>
+                                </div>
                             </div>
+
                             {isTypesExpanded && (
                                 <div className="type-checkboxes">
                                     {availableTypes.map(typeOption => (
@@ -199,14 +228,19 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                                             {ods.length === availableOds.length ? "Limpar" : "Selecionar tudo"}
                                         </button>
                                     )}
-                                    <button
-                                        className="collapse-button"
-                                        onClick={() => setIsOdsExpanded(!isOdsExpanded)}
-                                    >
-                                        {isOdsExpanded ? "Fechar" : "Abrir" }
-                                    </button>
+                                    <label className="container">
+                                        <input
+                                            type="checkbox"
+                                            checked={isOdsExpanded}
+                                            onChange={() => setIsOdsExpanded(!isOdsExpanded)}
+                                        />
+                                        <svg viewBox="0 0 512 512" height="1em" xmlns="http://www.w3.org/2000/svg" className="chevron-down">
+                                            <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+                                        </svg>
+                                    </label>
                                 </div>
                             </div>
+
                             {isOdsExpanded && (
                                 <div className="ods-checkboxes">
                                     {availableOds.map(odsOption => (
@@ -228,13 +262,18 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                     <div className="filter-group">
                         <div className="filter-label-with-button">
                             <label>Origem:</label>
-                            <button
-                                className="collapse-button"
-                                onClick={() => setIsOrigensExpanded(!isOrigensExpanded)}
-                            >
-                                {isOrigensExpanded ? "Fechar" : "Abrir"}
-                            </button>
+                            <label className="container">
+                                <input
+                                    type="checkbox"
+                                    checked={isOrigensExpanded}
+                                    onChange={() => setIsOrigensExpanded(!isOrigensExpanded)}
+                                />
+                                <svg viewBox="0 0 512 512" height="1em" xmlns="http://www.w3.org/2000/svg" className="chevron-down">
+                                    <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+                                </svg>
+                            </label>
                         </div>
+
                         {isOrigensExpanded && (
                             <div className="origem-checkboxes">
                                 {availableOrigens.map(origemOption => (

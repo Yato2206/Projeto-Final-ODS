@@ -3,7 +3,7 @@ import {createRoot} from "react-dom/client";
 import {createBrowserRouter, RouterProvider} from "react-router";
 import {SearchBar} from "./components/SearchBar";
 import {Home} from "./components/Home";
-import {DashboardFilters} from "./components/Dashboard";
+import {DashboardScreen} from "./components/Dashboard";
 
 const router = createBrowserRouter([
     {
@@ -12,7 +12,7 @@ const router = createBrowserRouter([
         children: [
             {
                 path:"/dashboard",
-                element: <DashboardFilters/>
+                element: <DashboardScreen/>
             },
             {
                 path:"/documents",

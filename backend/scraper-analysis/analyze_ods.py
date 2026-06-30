@@ -6,8 +6,6 @@ import os
 import nltk
 from nltk.corpus import stopwords
 
-# Descarregar recursos necessários do NLTK se ainda não os tiveres
-nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('punkt_tab')
 
@@ -39,10 +37,6 @@ def preprocessar_texto(texto):
     texto = texto.lower()
     texto = re.sub(r'[^\w\s]', ' ', texto)  # Remove pontuação
     palavras = nltk.word_tokenize(texto)
-
-    # Stopwords em PT e EN
-    # stop_words = set(stopwords.words('portuguese')).union(set(stopwords.words('english')))
-    # palavras_limpas = [p for p in palavras if p not in stop_words]
 
     return " ".join(palavras) #(palavras_limpas)
 

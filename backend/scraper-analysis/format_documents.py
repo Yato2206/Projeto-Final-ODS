@@ -256,11 +256,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-"""
-    extra_docs = {}
-    for extra_dir in args.extra_dir:
-        extra_docs.update(load_formatted_documents_from_directory(extra_dir, "Extra Source"))
-"""
-    # Merge and save
-    #all_docs = merge_and_save(newsletter_docs, repo_docs, {**api_docs, **extra_docs})
