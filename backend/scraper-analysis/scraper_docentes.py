@@ -55,7 +55,7 @@ LINK_TRANSFORMS = {
     "ISCAL": lambda link: link,
 }
 
-BASE_URLS: dict[str, str] = {
+BASE_URLS = {
     "ESCS": "https://www.escs.ipl.pt",
     "ESD":   "https://www.esd.ipl.pt",
     "ESELX": "https://www.eselx.ipl.pt",
@@ -67,7 +67,7 @@ BASE_URLS: dict[str, str] = {
 }
 
 #seletores CSS para achar os docentes de cada escola
-SELECTORS: dict[str, str] = {
+SELECTORS = {
     "ESCS": ".item div",
     "ESD":   ".content-main span",
     "ESELX": ".container-bg div",
@@ -149,7 +149,7 @@ async def fetch(session, semaphore, url, escola):
 #================================================
 
 #recebe um elemento BS, extraindo o conteúdo relevante
-def _parse_element(element, escola):
+def parse_element(element, escola):
     base_url = BASE_URLS[escola]
  
     if escola == "ESSL":
@@ -207,7 +207,7 @@ def parse_docentes(html, escola):
     docentes: dict = {}
     for element in items:
         #print(element)
-        result = _parse_element(element, escola)
+        result = parse_element(element, escola)
         if result:
             nome, record = result
             docentes[nome] = record
@@ -244,7 +244,7 @@ def load_departamentos_links(escola):
     return links
 
 # Retorna uma lista de links para fazer scrape para uma escola
-def build_link_sources(escola: str) -> list[dict]:
+def build_link_sources(escola):
     direct = DIRECT_URLS.get(escola)
     if direct:
         return [{"escola": escola, "title": escola, "link": direct, "source": "direct"}]
@@ -294,6 +294,26 @@ async def scrape_paginated_source(session, semaphore, escola, page_url, max_per_
 # SCRAPPING - DIRETO COM A ESCOLA
 #================================================
 
+async def scrape_one(session, semaphore, escola, link_info, existent_keys):
+    url = link_info["link"]
+    key = f"{escola}::{link_info.get('title') or url}"
+ 
+    if key in existent_keys:
+        print(f"[{escola}] Already scraped: {key}")
+        return {}
+ 
+    print(f"[{escola}] Scraping {url}...")
+    html = await fetch(session, semaphore, url, escola)
+    if not html:
+        return {}
+ 
+    records = parse_docentes(html, escola)
+    if not records:
+        return {}
+ 
+    records["sourceUrl"] = url
+    return {key: records}
+
 # Faz scrape de uma escola end-to-end. Não escreve nada no ficheiro, apenas retorna os dados encontrados.
 async def scrape_escola(session, semaphore, escola):
     existing_data = load_existing_data(escola)
@@ -339,7 +359,7 @@ async def scrape_escola(session, semaphore, escola):
 
     existent_keys = set(existing_data.keys())
 
-    results = await asyncio.gather(*[_scrape_one(session, semaphore, escola, source, existent_keys) for source in link_sources])
+    results = await asyncio.gather(*[scrape_one(session, semaphore, escola, source, existent_keys) for source in link_sources])
 
     all_data = dict(existing_data)
     for chunk in results:
@@ -348,26 +368,6 @@ async def scrape_escola(session, semaphore, escola):
     new_count = len(all_data) - len(existing_data)
     print(f"\n[{escola}] Completed")
     return all_data
-
-async def _scrape_one(session, semaphore, escola, link_info, existent_keys):
-    url = link_info["link"]
-    key = f"{escola}::{link_info.get('title') or url}"
- 
-    if key in existent_keys:
-        print(f"[{escola}] Already scraped: {key}")
-        return {}
- 
-    print(f"[{escola}] Scraping {url}...")
-    html = await fetch(session, semaphore, url, escola)
-    if not html:
-        return {}
- 
-    records = parse_docentes(html, escola)
-    if not records:
-        return {}
- 
-    records["sourceUrl"] = url
-    return {key: records}
 
 async def main():
     print(f"\n{'='*50}")

@@ -80,23 +80,6 @@ def fetch(url):
 """
     o ESD, o ESTC, ESSL e o ISCAL não possuem uma secção de departamento como as demais escolas para poder depois buscar os docentes por departamento
 """
-def choose_departamento_parse_html(html, escola):
-    """Parse page and extract newsletter items"""
-    soup = BeautifulSoup(html, 'html.parser')
-    match escola:
-        case "ESELX":
-            items = soup.select(".content-main p")
-            return departamento_parse(items, escola)
-        case "ESML":
-            items = soup.select(".category-desc h3")
-            return departamento_parse(items, escola)
-        case "ISEL":
-            items = soup.select(".gsc-column.col-lg-2")
-            #print(items)
-            return departamento_parse(items, escola)
-        case _:
-            return {}
-
 def departamento_parse(items, escola):
     #print(items)
     departamentos = {}
@@ -125,13 +108,9 @@ def departamento_parse(items, escola):
         if not href:
             print(f"  [Departamento Scrape] No href found for {nome}, skipping")
             continue
-        link = base_link + href if href and href.startswith('/') else href
+        link = base_link + href if href.startswith('/') else href
         #print(f"Link: {link}")
-
-        if not link:
-            print(f"  [Departamento Scrape] No link found for {nome_elem}, skipping")
-            continue
-
+       
         departamentos[nome] = {
             "escola": escola,
             "link": link,
@@ -142,7 +121,24 @@ def departamento_parse(items, escola):
 
     return departamentos
 
-def _scrape_sequential(escola, existing_data, all_deps_shared, prefix="[Sequential]"):
+def choose_departamento_parse_html(html, escola):
+    """Parse page and extract newsletter items"""
+    soup = BeautifulSoup(html, 'html.parser')
+    match escola:
+        case "ESELX":
+            items = soup.select(".content-main p")
+            return departamento_parse(items, escola)
+        case "ESML":
+            items = soup.select(".category-desc h3")
+            return departamento_parse(items, escola)
+        case "ISEL":
+            items = soup.select(".gsc-column.col-lg-2")
+            #print(items)
+            return departamento_parse(items, escola)
+        case _:
+            return {}
+
+def scrape_sequential(escola, existing_data, all_deps_shared, prefix="[Sequential]"):
     """Core sequential scraping logic"""
     first_item_key = None
 
@@ -210,7 +206,7 @@ def scrape_departamentos(escola):
             }
         print(f"  [Sequential] {len(ESCS_DEPARTAMENTOS)} items added for ESCS")
 
-    _scrape_sequential(escola, existing_data, all_deps)
+    scrape_sequential(escola, existing_data, all_deps)
 
     save_data(all_deps)
     _print_summary(existing_data, all_deps) #NOTA para cada link diferente, o ficheiro e aberto e fechado por isso o numero no final de novos items pode nao corresponder com o de facto adicionado
