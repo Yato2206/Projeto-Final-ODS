@@ -204,7 +204,7 @@ def parse_docentes(html, escola):
     soup  = BeautifulSoup(html, "html.parser")
     items = soup.select(SELECTORS[escola])
  
-    docentes: dict = {}
+    docentes = {}
     for element in items:
         #print(element)
         result = parse_element(element, escola)

@@ -18,7 +18,7 @@ RETRIES = 3
 MAX_CONCURRENT  = 5 
 START_PAGE = 0
 
-escolas = ["ESD", "ESELX", "ESML", "ESTC", "ESSL", "ISCAL", "ISEL"]
+escolas = ["ESCS", "ESD", "ESELX", "ESML", "ESTC", "ESSL", "ISCAL", "ISEL"]
 #escolas = ["ISEL"]
 #seletores CSS para achar os links de cada docente
 SELECTORS: dict[str, str] = {
@@ -105,23 +105,24 @@ async def fetch(session, semaphore, url, name):
 #================================================
 
 #extração do nome da ligaçao, que pode vir de várias maneiras, dependendo da fonte
-def extract_name(a):
+#selector é, normalmente, um elemento <a> do BeautifulSoup
+def extract_name(selector):
     #primeira tentativa: usar o atributo title do link
-    nome = (a.get("title") or "").strip()
+    nome = (selector.get("title") or "").strip()
     if not nome:
         #segunda tentativa: usar o texto anterior ao link, que pode estar colado ao link
-        nome_raw = a.previous_sibling
+        nome_raw = selector.previous_sibling
         nome = str(nome_raw).strip() if nome_raw is not None else ""
         nome = nome.strip("|").rstrip(":").strip()
     if not nome:
         #terceira tentativa: usar o texto do link
-        nome = a.get_text(strip=True)
+        nome = selector.get_text(strip=True)
     #caso exemplo: ORCID ID, só se quer o ORCID, sem o ID
     if nome.endswith(" ID") or nome.endswith(" ID"):
         nome = nome[:-len(" ID")].strip()
     return nome
 
-#recebe um elemento BS, extraindo o conteúdo relevante. 
+#Recebe um elemento BS, extraindo o conteúdo relevante. 
 #Retorna todos os links associados ao docente
 def parse_element(element):
     resultados = []
@@ -129,7 +130,8 @@ def parse_element(element):
     for p in element.select("p"):
         for a in p.select("a"):
             href = a.get("href")
-            if not href or href.startswith("?") or "mailto:" in href:
+            #apesar de improvável, cobre os casos em que o seletor a não tem href
+            if not href or href.startswith("?") or "mailto:" in href: 
                 continue
 
             nome = extract_name(a)
@@ -165,7 +167,7 @@ def parse_info(html, escola):
 
 def base_record(escola, url):
     return {
-        "sourceUrl":   url,
+        "sourceUrl": url,
         "escola": escola,
         "dateChecked": datetime.now().isoformat(),
     }
@@ -191,7 +193,8 @@ async def scrape_one(session, semaphore, entry, existing_keys):
     parsed = parse_info(html, escola)
 
     if parsed:
-        record.update(parsed)
+        merged = {**parsed, **record}   # base_record tem prioridade
+        record.update(merged)
     else:
         print(f"[{name}] No data found — saving base record")
 

@@ -249,7 +249,7 @@ async def test_scrape_newsletter(monkeypatch):
     })
 
     link_info = {"link": "/noticia/123", "dataPublicacao": "2026-06-20"}
-    resultado = await scraper.scrape_newsletter(session=None, link_info=link_info, existing_data={})
+    resultado = await scraper.scrape_newsletter(None, link_info, {})
 
     assert resultado is not None
     titulo, content = resultado
@@ -266,7 +266,7 @@ async def test_scrape_newsletter_item_ja_existente_devolve_none(monkeypatch):
     link_info = {"link": "/noticia/123"}
     existing_data = {"Já Existe": {}}
 
-    resultado = await scraper.scrape_newsletter(session=None, link_info=link_info, existing_data=existing_data)
+    resultado = await scraper.scrape_newsletter(None, link_info, existing_data)
     assert resultado is None
 
 @pytest.mark.asyncio
@@ -274,7 +274,7 @@ async def test_scrape_newsletter_fetch_falha_devolve_none(monkeypatch):
     monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value=None))
 
     link_info = {"link": "/noticia/x"}
-    resultado = await scraper.scrape_newsletter(session=None, link_info=link_info, existing_data={})
+    resultado = await scraper.scrape_newsletter(None, link_info, {})
     assert resultado is None
 
 @pytest.mark.asyncio
@@ -284,7 +284,7 @@ async def test_scrape_newsletter_parse_content_devolve_none(monkeypatch):
     monkeypatch.setattr(scraper, "parse_newsletter_content", lambda html, id, data, url: None)
 
     link_info = {"link": "/noticia/x"}
-    resultado = await scraper.scrape_newsletter(session=None, link_info=link_info, existing_data={})
+    resultado = await scraper.scrape_newsletter(None, link_info, {})
     assert resultado is None
 
 @pytest.mark.asyncio
@@ -297,7 +297,7 @@ async def test_scrape_chunk_adiciona_todos_os_resultados(monkeypatch):
     chunk = [{"link": "/a"}, {"link": "/b"}, {"link": "/c"}]
     all_data_shared = {}
 
-    await scraper._scrape_chunk(session=None, chunk=chunk, existing_data={}, all_data_shared=all_data_shared)
+    await scraper._scrape_chunk(None, chunk, {}, all_data_shared)
 
     assert len(all_data_shared) == 3
     assert "/a" in all_data_shared
@@ -315,7 +315,7 @@ async def test_scrape_chunk_erro_num_item_nao_bloqueia_os_outros(monkeypatch):
     chunk = [{"link": "/a"}, {"link": "/falha"}, {"link": "/c"}]
     all_data_shared = {}
 
-    await scraper._scrape_chunk(session=None, chunk=chunk, existing_data={}, all_data_shared=all_data_shared)
+    await scraper._scrape_chunk(None, chunk, {}, all_data_shared)
 
     assert len(all_data_shared) == 2          # "/falha" não entrou, os outros sim
     assert "/falha" not in all_data_shared
@@ -333,7 +333,7 @@ async def test_scrape_chunk_resultado_none_nao_adiciona_nada(monkeypatch):
     chunk = [{"link": "/a"}, {"link": "/b"}]
     all_data_shared = {}
 
-    await scraper._scrape_chunk(session=None, chunk=chunk, existing_data={}, all_data_shared=all_data_shared)
+    await scraper._scrape_chunk(None, chunk, {}, all_data_shared)
 
     assert all_data_shared == {}
 
@@ -355,7 +355,7 @@ async def test_scrape_parallel_divide_em_chunks_corretamente(monkeypatch):
 
     links = [{"link": f"/{i}"} for i in range(10)]
 
-    await scraper.scrape_newsletters_parallel(links, num_scrapers=3, force_full=False)
+    await scraper.scrape_newsletters_parallel(links, 3, False)
 
     total_distribuido = sum(len(c) for c in chunks_recebidos)
     assert total_distribuido == 10
