@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 
 # Configuração
 BASE_URL = "https://www.ipl.pt/en/politecnico/comunicacao/newsletter"
-OUTPUT_FILE = "documents/newsletter_links.json"
+OUTPUT_FILE = "documents/newsletter/newsletter_links.json"
 RETRIES = 3
 MIN_ITEMS_PER_PAGE = 10
 

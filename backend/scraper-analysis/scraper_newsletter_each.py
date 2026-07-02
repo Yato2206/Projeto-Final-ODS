@@ -9,8 +9,8 @@ from urllib.parse import urlparse
 import re
 
 # Configuração
-INPUT_FILE = "documents/newsletter_links.json"
-OUTPUT_FILE = "documents/newsletter_content.json"
+INPUT_FILE = "documents/newsletter/newsletter_links.json"
+OUTPUT_FILE = "documents/newsletter/newsletter_content.json"
 CONCURRENT_REQUESTS = 5
 RETRIES = 3
 NUM_SCRAPERS = 5

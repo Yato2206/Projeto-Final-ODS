@@ -29,7 +29,7 @@ DOCUMENTS_DIR = SCRIPT_DIR / "documents"
 
 
 def load_formatted_documents_from_directory(source_dir, origin_label, pattern="*.json"):
-    """Load already-formatted documents from a directory."""
+
     formatted_docs = {}
     source_dir = Path(source_dir)
 
@@ -65,7 +65,7 @@ def load_formatted_documents_from_directory(source_dir, origin_label, pattern="*
                     "dataPublicacao": doc.get("dataPublicacao", ""),
                     "tipo": doc.get("tipo", ""),
                     "dateChecked": doc.get("dateChecked", datetime.now().isoformat()),
-                    "origem": doc.get("origem", origin_label),
+                    "origem": doc.get("origem", origin_label)
                 }
                 total_items += 1
                 file_items += 1
@@ -79,12 +79,12 @@ def load_formatted_documents_from_directory(source_dir, origin_label, pattern="*
     return formatted_docs
 
 def format_newsletter_documents():
-    """Format newsletter content to standardized structure"""
+
     print("\n" + "="*60)
     print("FORMATTING NEWSLETTER DOCUMENTS")
     print("="*60)
 
-    newsletter_file = DOCUMENTS_DIR / "newsletter_content.json"
+    newsletter_file = DOCUMENTS_DIR / "newsletter" / "newsletter_content.json"
     formatted_docs = {}
 
     if not newsletter_file.exists():
@@ -97,11 +97,10 @@ def format_newsletter_documents():
     total_items = 0
 
     for newsletter_name, newsletter in newsletters.items():
-        # Extract publication date
+
         date_publicacao = newsletter.get("dataPublicacao", "")
         date_checked = newsletter.get("dateChecked", datetime.now().isoformat())
 
-        # Process Politécnico text as main item
         politecnico_titulo = newsletter.get("politecnicoTitulo", newsletter_name)
         politecnico_texto = newsletter.get("politecnicoTexto", "")
         link = newsletter.get("link", "")
@@ -118,7 +117,6 @@ def format_newsletter_documents():
             }
             total_items += 1
 
-        # Process each noticia as separate item
         noticias = newsletter.get("noticias", [])
         for idx, noticia in enumerate(noticias):
             noticia_titulo = noticia.get("titulo", "")
@@ -143,13 +141,12 @@ def format_newsletter_documents():
 
 
 def format_scientific_repo_documents():
-    """Format scientific repository documents to standardized structure"""
     print("\n" + "="*60)
     print("FORMATTING SCIENTIFIC REPOSITORY DOCUMENTS")
     print("="*60)
 
     formatted_docs = {}
-    repo_files = sorted(glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json")))
+    repo_files = sorted(glob.glob(str(DOCUMENTS_DIR / "repo_cientifico" / "repo_cientifico_*.json")))
 
     total_items = 0
 
@@ -167,7 +164,7 @@ def format_scientific_repo_documents():
                 tipo = doc.get("tipo", "")
                 date_checked = doc.get("dateChecked", datetime.now().isoformat())
 
-                if texto:  # Only include if there's text content
+                if texto:
                     formatted_docs[link] = {
                         "titulo": titulo,
                         "autores": autores,
@@ -188,9 +185,7 @@ def format_scientific_repo_documents():
     print(f"Formatted {total_items} scientific repository items")
     return formatted_docs
 
-
 def merge_and_save(newsletter_docs, repo_docs, api_docs, chunk_size=1000):
-    """Merge all documents and save into multiple chunked files"""
 
     print("\n" + "="*60)
     print("MERGING AND SAVING")
@@ -199,13 +194,12 @@ def merge_and_save(newsletter_docs, repo_docs, api_docs, chunk_size=1000):
     all_docs = {**newsletter_docs, **repo_docs, **api_docs}
 
     items = list(all_docs.items())
-
     total_files = 0
 
     for i in range(0, len(items), chunk_size):
         chunk = dict(items[i:i + chunk_size])
 
-        output_file = DOCUMENTS_DIR / f"documents_formatted_{total_files + 1}.json"
+        output_file = DOCUMENTS_DIR / "formatted_docs" / f"documents_formatted_{total_files + 1}.json"
 
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(chunk, f, ensure_ascii=False, indent=2)
@@ -220,7 +214,6 @@ def merge_and_save(newsletter_docs, repo_docs, api_docs, chunk_size=1000):
 
 
 def parse_args():
-    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Format and merge document JSON files.")
     parser.add_argument(
         "--extra-dir",
@@ -231,7 +224,6 @@ def parse_args():
     return parser.parse_args()
 
 def main():
-    """Main formatter pipeline"""
     print("\nStarting document formatter...")
 
     args = parse_args()

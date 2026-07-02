@@ -101,7 +101,7 @@ def main():
     first_year = current_year if existing_files > 0 else current_year - 5  
 
     # valor em dias para definir quando faz uma pesquisa ao scopus, em vez de pegar os dados da cache
-    # por defeito, serão 7 dias (uma semana) para atualizar, gastanto tokens apenas 1 vez por semana 
+    # por defeito, serão 7 dias (uma semana) para atualizar, gastando tokens apenas 1 vez por semana
     period_to_search = 7
 
     folder_path = os.path.join(os.getcwd(), "documents")

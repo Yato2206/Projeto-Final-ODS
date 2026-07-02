@@ -6,3 +6,4 @@ node_modules
 scraper-analysis/package-lock.json
 *.json
 *.pyc
+!backend/scraper-analysis/documents/taxonomies/taxo_UoA.json

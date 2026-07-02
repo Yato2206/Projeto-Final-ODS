@@ -31,10 +31,10 @@ items_in_current_file = 0
 file_lock = asyncio.Lock()
 
 def get_data_filename(index):
-    return str(DOCUMENTS_DIR / f"repo_cientifico_{index}.json")
+    return str(DOCUMENTS_DIR / "repo_cientifico" / f"repo_cientifico_{index}.json")
 
 def get_current_file_index():
-    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
+    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico" / "repo_cientifico_*.json"))
     if not existing_files:
         return 1
     indices = []
@@ -51,7 +51,7 @@ def load_all_existing_data():
     done_links = set()
     total_count = 0
 
-    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
+    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico" / "repo_cientifico_*.json"))
     for file in existing_files:
         try:
             with open(file, "r", encoding="utf-8") as f:
@@ -468,7 +468,7 @@ async def main():
 
     # Delete all existing repo_cientifico_*.json files if force_full is enabled
     if force_full:
-        existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
+        existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico" / "repo_cientifico_*.json"))
         if existing_files:
             print("Force mode: Deleting existing repo files...")
             for file in existing_files:
@@ -489,7 +489,7 @@ async def main():
 
     # Load existing data
     done_links, total_existing = load_all_existing_data()
-    print(f"Existing data: {total_existing} items in {len(glob.glob(f'{DOCUMENTS_DIR}/repo_cientifico_*.json'))} files")
+    print(f"Existing data: {total_existing} items in {len(glob.glob(f'{DOCUMENTS_DIR}/repo_cientifico/repo_cientifico_*.json'))} files")
     print(f"Next file: {get_data_filename(current_file_index)}")
     print(f"Already scraped links: {len(done_links)}\n")
 
@@ -519,7 +519,7 @@ async def main():
             print(f"Year {year}: Error - {result}")
 
     # Final info
-    all_files = glob.glob(f'{DOCUMENTS_DIR}/repo_cientifico_*.json')
+    all_files = glob.glob(f'{DOCUMENTS_DIR}/repo_cientifico/repo_cientifico_*.json')
     total_items = 0
     for file in all_files:
         try:
