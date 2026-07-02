@@ -4,7 +4,7 @@ import {useEffect, useReducer, useState, useRef} from "react";
 import { toPng } from "html-to-image";
 import {Result} from "../interfaces";
 import { getNumberDocs } from "./Utilis";
-import { Tipo , Ods , Origens } from "../types";
+import { Tipo, Ods, Origens, Taxonomias } from "../types";
 import * as XLSX from 'xlsx';
 import '../styles/Dashboard.css';
 import BarChartComponent from "./BarChart";
@@ -32,6 +32,12 @@ const availableOds: Ods[] = [
     "ODS 17 - Parcerias para a Implementação dos Objetivos"
 ]
 const availableOrigens: Origens[] = ["Repositório Científico", "Newsletter", "Scopus"];
+const availableTaxonomias: Taxonomias[] = ["Universidade de Auckland", "Universidade de Educação de Hong Kong"];
+
+const taxonomia_names: Record<Taxonomias, string> = {
+    "Universidade de Auckland": "UoA",
+    "Universidade de Educação de Hong Kong": "HK"
+};
 
 type State = {
     minDate: string;
@@ -39,6 +45,7 @@ type State = {
     types: string[];
     ods: string[];
     origens: string[];
+    taxonomias: string[];
 };
 
 type PendingFilters = {
@@ -47,10 +54,11 @@ type PendingFilters = {
     types: string[];
     ods: string[];
     origens: string[];
+    taxonomias: string[];
 };
 
 type Action =
-    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[]; origens: string[] };
+    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[]; origens: string[]; taxonomias: string[] };
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
@@ -61,6 +69,7 @@ function reducer(state: State, action: Action): State {
                 types: action.types,
                 ods: action.ods,
                 origens: action.origens,
+                taxonomias: action.taxonomias,
             };
         default:
             return state;
@@ -73,6 +82,7 @@ const initialState: State = {
     types: [],
     ods: [],
     origens: [],
+    taxonomias: [],
 };
 
 function GridItem({ title, children }) {
@@ -92,6 +102,7 @@ export function DashboardScreen() {
         types: [],
         ods: [],
         origens: [],
+        taxonomias: [],
     });
     const [data, setData] = useState<Result[]>([]);
     const [dashboardData, setDashboardData] = useState<any>(null);
@@ -129,12 +140,19 @@ export function DashboardScreen() {
                         const data = await response.json();
                         
                         Object.entries(data).forEach(([key, value]: [string, any]) => {
-                            const ods = value.ods_mapeados ? Object.keys(value.ods_mapeados) : [];
-                            
-                            // Extract ODS numbers for the filter
-                            ods.forEach((odsKey: string) => {
-                                odsSet.add(odsKey);
-                            });
+                            const odsMapeados: Record<string, string[]> = {};
+                            const taxonomiasDoc: string[] = [];
+
+                            if (value.ods_mapeados) {
+                                Object.entries(value.ods_mapeados).forEach(([taxCode, odsObj]) => {
+                                    const odsList = odsObj ? Object.keys(odsObj as object) : [];
+                                    odsMapeados[taxCode] = odsList;
+
+                                    if (odsList.length > 0) {
+                                        taxonomiasDoc.push(taxCode);
+                                    }
+                                });
+                            }
 
                             const doc: Result = {
                                 id: key,
@@ -144,7 +162,8 @@ export function DashboardScreen() {
                                 autores: value.autores,
                                 origin: value.origem,
                                 dateChecked: value.dateChecked,
-                                ods: ods,
+                                odsMapeados: odsMapeados,
+                                taxonomias: taxonomiasDoc,
                             };
                             formattedDocs.push(doc);
                         });
@@ -173,6 +192,20 @@ export function DashboardScreen() {
         const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
         const endDate = new Date(parseInt(year), parseInt(month), 0);
         return { startDate, endDate };
+    };
+
+    const getOdsForTaxonomia = (taxonomiaName: string): string[] => {
+        if (!taxonomiaName) return [];
+        const code = taxonomia_names[taxonomiaName as Taxonomias];
+        const odsSet = new Set<string>();
+
+        data.forEach(item => {
+            if (item.odsMapeados && item.odsMapeados[code]) {
+                item.odsMapeados[code].forEach(o => odsSet.add(o));
+            }
+        });
+
+        return availableOds.filter(ods => odsSet.has(ods));
     };
 
     const handleMinDateChange = (minDate: string) => {
@@ -210,6 +243,14 @@ export function DashboardScreen() {
         });
     };
 
+    const handleTaxonomiasChange = (taxonomias: string[]) => {
+        setPendingFilters({
+            ...pendingFilters,
+            taxonomias,
+            ods: [], // reset porque as opções de ODS dependem da taxonomia
+        });
+    };
+
     const generateDashboards = () => {
 
         let filtered = [...data];
@@ -244,10 +285,20 @@ export function DashboardScreen() {
             );
         }
 
-        // ODS filter
-        if (pendingFilters.ods && pendingFilters.ods.length > 0) {
+        let selectedTax: string | null = null;
+        if (pendingFilters.taxonomias && pendingFilters.taxonomias.length > 0) {
+            selectedTax = taxonomia_names[pendingFilters.taxonomias[0] as Taxonomias];
             filtered = filtered.filter(item =>
-                item.ods && item.ods.some((odsItem: string) => pendingFilters.ods.includes(odsItem))
+                item.taxonomias && item.taxonomias.includes(selectedTax!)
+            );
+        }
+
+        // ODS filter
+        if (selectedTax && pendingFilters.ods && pendingFilters.ods.length > 0) {
+            filtered = filtered.filter(item =>
+                item.odsMapeados &&
+                item.odsMapeados[selectedTax!] &&
+                item.odsMapeados[selectedTax!].some((odsItem: string) => pendingFilters.ods.includes(odsItem))
             );
         }
 
@@ -260,13 +311,15 @@ export function DashboardScreen() {
 
         // Count items per ODS
         const odsCount: { [key: string]: number } = {};
-        pendingFilters.ods.forEach(ods => {
+        const relevantOds = selectedTax ? getOdsForTaxonomia(pendingFilters.taxonomias[0]) : [];
+        relevantOds.forEach(ods => {
             odsCount[ods] = 0;
         });
 
         filtered.forEach(item => {
-            if (item.ods) {
-                item.ods.forEach(ods => {
+            const itemOds = selectedTax && item.odsMapeados ? item.odsMapeados[selectedTax] : undefined;
+            if (itemOds) {
+                itemOds.forEach(ods => {
                     if (odsCount.hasOwnProperty(ods)) {
                         odsCount[ods]++;
                     }
@@ -325,6 +378,7 @@ export function DashboardScreen() {
             types: pendingFilters.types,
             ods: pendingFilters.ods,
             origens: pendingFilters.origens,
+            taxonomias: pendingFilters.taxonomias,
         });
 
         setFilteredData(filtered);
@@ -336,7 +390,9 @@ export function DashboardScreen() {
                 types: pendingFilters.types,
                 ods: pendingFilters.ods,
                 origens: pendingFilters.origens,
+                taxonomias: pendingFilters.taxonomias,
             },
+            selectedTax: selectedTax,
             totalItems: filtered.length,
             chartData: chartData,
             monthlyData: monthlyData
@@ -344,11 +400,15 @@ export function DashboardScreen() {
     };
 
     const handleExport = () => {
+        const taxonomia = dashboardData?.selectedTax;
+
         const exportData = filteredData.map(item => ({
             "Título": item.name,
             "Tipo": item.type,
             "Origem": item.origin,
-            "ODS": item.ods.join("; "),
+            "ODS": taxonomia && item.odsMapeados?.[taxonomia]
+                ? item.odsMapeados[taxonomia].join("; ")
+                : "",
         }));
 
         const wb = XLSX.utils.book_new();
@@ -388,15 +448,22 @@ export function DashboardScreen() {
                 onTypesChange={handleTypesChange}
                 onOdsChange={handleOdsChange}
                 onOrigensChange={handleOrigensChange}
+                onTaxonomiasChange={handleTaxonomiasChange}
                 onApplyFilters={generateDashboards}
                 minDate={pendingFilters.minDate}
                 maxDate={pendingFilters.maxDate}
                 types={pendingFilters.types}
                 ods={pendingFilters.ods}
                 origens={pendingFilters.origens}
+                taxonomias={pendingFilters.taxonomias}
                 availableTypes={availableTypes}
-                availableOds={availableOds}
+                availableOds={
+                    pendingFilters.taxonomias.length === 1
+                        ? getOdsForTaxonomia(pendingFilters.taxonomias[0])
+                        : []
+                }
                 availableOrigens={availableOrigens}
+                availableTaxonomias={availableTaxonomias}
                 buttonLabel="Gerar Dashboard"
                 yearRange={getYearRange()}
             />

@@ -112,19 +112,7 @@
     box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
 }
 
-.type-checkboxes {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-.ods-checkboxes {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-.origem-checkboxes {
+.checkboxes {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
@@ -169,6 +157,14 @@
 .apply-button:active {
     background-color: #0d47a1;
 }
+
+.apply-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #ccc;
+    color: #666;
+}
+
 
 .filter-button {
     width: 100%;

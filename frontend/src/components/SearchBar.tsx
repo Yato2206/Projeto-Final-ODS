@@ -4,7 +4,7 @@ import OutputList from "./OutputList";
 import FilterPanel from "./FilterPanel";
 import { getNumberDocs } from "./Utilis";
 import {Result} from "../interfaces";
-import { Tipo , Ods , Origens } from "../types";
+import { Tipo , Ods , Origens , Taxonomias } from "../types";
 import '../styles/SearchBar.css';
 
 const ITEMS_PER_PAGE = 10;
@@ -29,6 +29,12 @@ const availableOds: Ods[] = [
     "ODS 17 - Parcerias para a Implementação dos Objetivos"
 ]
 const availableOrigens: Origens[] = ["Repositório Científico", "Newsletter", "Scopus"];
+const availableTaxonomias: Taxonomias[] = ["Universidade de Auckland" , "Universidade de Educação de Hong Kong"];
+
+const taxonomia_names: Record<Taxonomias, string> = {
+    "Universidade de Auckland": "UoA",
+    "Universidade de Educação de Hong Kong": "HK"
+};
 
 type State = {
     minDate: string;
@@ -36,6 +42,7 @@ type State = {
     types: string[];
     ods: string[];
     origens: string[];
+    taxonomias: string[];
 };
 
 type PendingFilters = {
@@ -44,10 +51,11 @@ type PendingFilters = {
     types: string[];
     ods: string[];
     origens: string[];
+    taxonomias: string[];
 };
 
 type Action =
-    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[]; origens: string[] };
+    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[]; origens: string[]; taxonomias: string[] };
 
 function reducer(state: State, action: Action): State {
     switch (action.type) {
@@ -58,6 +66,7 @@ function reducer(state: State, action: Action): State {
                 types: action.types,
                 ods: action.ods,
                 origens: action.origens,
+                taxonomias: action.taxonomias,
             };
         default:
             return state;
@@ -70,6 +79,7 @@ const initialState: State = {
     types: [],
     ods: [],
     origens: [],
+    taxonomias: [],
 };
 
 export function SearchBar() {
@@ -80,6 +90,7 @@ export function SearchBar() {
         types: [],
         ods: [],
         origens: [],
+        taxonomias: [],
     });
     const [data, setData] = useState<Result[]>([]);
     const [filteredData, setFilteredData] = useState<Result[]>([]);
@@ -115,12 +126,19 @@ export function SearchBar() {
                         const data = await response.json();
                         
                         Object.entries(data).forEach(([key, value]: [string, any]) => {
-                            const ods = value.ods_mapeados ? Object.keys(value.ods_mapeados) : [];
-                            
-                            // Extract ODS numbers for the filter
-                            ods.forEach((odsKey: string) => {
-                                odsSet.add(odsKey);
-                            });
+                            const odsMapeados: Record<string, string[]> = {};
+                            const taxonomiasDoc: string[] = [];
+
+                            if (value.ods_mapeados) {
+                                Object.entries(value.ods_mapeados).forEach(([taxCode, odsObj]) => {
+                                    const odsList = odsObj ? Object.keys(odsObj as object) : [];
+                                    odsMapeados[taxCode] = odsList;
+
+                                    if (odsList.length > 0) {
+                                        taxonomiasDoc.push(taxCode);
+                                    }
+                                });
+                            }
 
                             const doc: Result = {
                                 id: key,
@@ -130,7 +148,8 @@ export function SearchBar() {
                                 autores: value.autores,
                                 origin: value.origem,
                                 dateChecked: value.dateChecked,
-                                ods: ods,
+                                odsMapeados: odsMapeados,
+                                taxonomias: taxonomiasDoc,
                             };
                             formattedDocs.push(doc);
                         });
@@ -157,6 +176,20 @@ export function SearchBar() {
         const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
         const endDate = new Date(parseInt(year), parseInt(month), 0);
         return { startDate, endDate };
+    };
+
+    const getOdsForTaxonomia = (taxonomiaName: string): string[] => {
+        if (!taxonomiaName) return [];
+        const code = taxonomia_names[taxonomiaName as Taxonomias];
+        const odsSet = new Set<string>();
+
+        data.forEach(item => {
+            if (item.odsMapeados && item.odsMapeados[code]) {
+                item.odsMapeados[code].forEach(o => odsSet.add(o));
+            }
+        });
+
+        return availableOds.filter(ods => odsSet.has(ods));
     };
 
     const applyFilters = () => {
@@ -192,10 +225,20 @@ export function SearchBar() {
             );
         }
 
-        // ODS filter - check if any selected ODS is present in item.ods
-        if (state.ods && state.ods.length > 0) {
+        let selectedTax: string | null = null;
+        if (state.taxonomias && state.taxonomias.length > 0) {
+            selectedTax = taxonomia_names[state.taxonomias[0] as Taxonomias];
             filtered = filtered.filter(item =>
-                item.ods && item.ods.some((odsItem: string) => state.ods.includes(odsItem))
+                item.taxonomias && item.taxonomias.includes(selectedTax!)
+            );
+        }
+
+        // ODS filter - check if any selected ODS is present in item.ods
+        if (selectedTax && state.ods && state.ods.length > 0) {
+            filtered = filtered.filter(item =>
+                item.odsMapeados &&
+                item.odsMapeados[selectedTax!] &&
+                item.odsMapeados[selectedTax!].some((odsItem: string) => state.ods.includes(odsItem))
             );
         }
 
@@ -314,6 +357,14 @@ export function SearchBar() {
         });
     };
 
+    const handleTaxonomiasChange = (taxonomias: string[]) => {
+        setPendingFilters({
+            ...pendingFilters,
+            taxonomias,
+            ods: [], // reset porque as opções de ODS dependem da taxonomia
+        });
+    };
+
     const handleApplyFilters = () => {
         dispatch({
             type: "apply-filters",
@@ -322,6 +373,7 @@ export function SearchBar() {
             types: pendingFilters.types,
             ods: pendingFilters.ods,
             origens: pendingFilters.origens,
+            taxonomias: pendingFilters.taxonomias,
         });
     };
 
@@ -335,15 +387,22 @@ export function SearchBar() {
                 onTypesChange={handleTypesChange}
                 onOdsChange={handleOdsChange}
                 onOrigensChange={handleOrigensChange}
+                onTaxonomiasChange={handleTaxonomiasChange}
                 onApplyFilters={handleApplyFilters}
                 minDate={pendingFilters.minDate}
                 maxDate={pendingFilters.maxDate}
                 types={pendingFilters.types}
                 ods={pendingFilters.ods}
                 origens={pendingFilters.origens}
+                taxonomias={pendingFilters.taxonomias}
                 availableTypes={availableTypes}
-                availableOds={availableOds}
+                availableOds={
+                    pendingFilters.taxonomias.length === 1
+                        ? getOdsForTaxonomia(pendingFilters.taxonomias[0])
+                        : []
+                }
                 availableOrigens={availableOrigens}
+                availableTaxonomias={availableTaxonomias}
                 buttonLabel="Aplicar Filtros"
                 yearRange={getYearRange()}
             />

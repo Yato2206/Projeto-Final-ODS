@@ -7,15 +7,18 @@ interface FilterPanelProps {
     onTypesChange: (types: string[]) => void;
     onOdsChange: (ods: string[]) => void;
     onOrigensChange: (origens: string[]) => void;
+    onTaxonomiasChange: (taxonomias: string[]) => void;
     onApplyFilters: () => void;
     minDate: string;
     maxDate: string;
     types: string[];
     ods: string[];
     origens: string[];
+    taxonomias: string[];
     availableTypes: string[];
     availableOds: string[];
     availableOrigens: string[];
+    availableTaxonomias: string[];
     buttonLabel?: string;
     yearRange?: { minYear: number; maxYear: number };
 }
@@ -26,15 +29,18 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     onTypesChange,
     onOdsChange,
     onOrigensChange,
+    onTaxonomiasChange,
     onApplyFilters,
     minDate,
     maxDate,
     types,
     ods,
     origens,
+    taxonomias,
     availableTypes,
     availableOds,
     availableOrigens,
+    availableTaxonomias,
     buttonLabel = "Aplicar Filtros",
     yearRange
 }) => {
@@ -109,6 +115,16 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         onOrigensChange(updatedOrigem);
     };
 
+    const handleTaxonomiaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const taxonomiaValue = e.target.value;
+
+        if (e.target.checked) {
+            onTaxonomiasChange([taxonomiaValue]);
+        } else {
+            onTaxonomiasChange([]);
+        }
+    };
+
     const handleSelectAllTypes = () => {
         if (types.length === availableTypes.length) {
             onTypesChange([]);
@@ -173,6 +189,27 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                         />
                     </div>
 
+                    <div className="filter-group">
+                        <div className="filter-label-with-button">
+                            <label>Taxonomia:</label>
+                        </div>
+
+                        <div className="checkboxes">
+                            {availableTaxonomias.map(taxonomiaOption => (
+                                <div key={taxonomiaOption} className="checkbox-item">
+                                    <input
+                                        id={`taxonomia-${taxonomiaOption}`}
+                                        type="checkbox"
+                                        value={taxonomiaOption}
+                                        checked={taxonomias.includes(taxonomiaOption)}
+                                        onChange={handleTaxonomiaChange}
+                                    />
+                                    <label htmlFor={`taxonomia-${taxonomiaOption}`}>{taxonomiaOption}</label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                         <div className="filter-group">
                             <div className="filter-label-with-button">
                                 <label>Tipo:</label>
@@ -199,7 +236,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                             </div>
 
                             {isTypesExpanded && (
-                                <div className="type-checkboxes">
+                                <div className="checkboxes">
                                     {availableTypes.map(typeOption => (
                                         <div key={typeOption} className="checkbox-item">
                                             <input
@@ -242,7 +279,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                             </div>
 
                             {isOdsExpanded && (
-                                <div className="ods-checkboxes">
+                                taxonomias.length === 0 ? (
+                                    <p className="filter-hint">Selecione uma taxonomia para ver os ODS disponíveis.</p>
+                                ) : (
+                                <div className="checkboxes">
                                     {availableOds.map(odsOption => (
                                         <div key={odsOption} className="checkbox-item">
                                             <input
@@ -256,6 +296,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                                         </div>
                                     ))}
                                 </div>
+                                )
                             )}
                         </div>
 
@@ -275,7 +316,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                         </div>
 
                         {isOrigensExpanded && (
-                            <div className="origem-checkboxes">
+                            <div className="checkboxes">
                                 {availableOrigens.map(origemOption => (
                                     <div key={origemOption} className="checkbox-item">
                                         <input
@@ -292,7 +333,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                         )}
                     </div>
 
-                    <button onClick={onApplyFilters} className="apply-button">
+                    <button onClick={onApplyFilters} className="apply-button" disabled={taxonomias.length === 0}>
                         {buttonLabel}
                     </button>
                 </div>
