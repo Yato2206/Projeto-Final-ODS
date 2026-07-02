@@ -19,7 +19,6 @@ ITEMS_PER_FILE = 1000
 BATCH_SIZE = 100
 HEADLESS = True  # Muda para False para ver os browsers
 DOCUMENTS_DIR = Path("documents/repo_cientifico")
-DOCUMENTS_DIR.mkdir(exist_ok=True)
 
 CURRENT_YEAR = datetime.now().year
 
@@ -537,4 +536,5 @@ async def main():
     print(f"{'='*100}\n")
 
 if __name__ == "__main__":
+    DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
     asyncio.run(main())

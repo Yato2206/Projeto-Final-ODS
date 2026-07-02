@@ -17,6 +17,7 @@ into a standardized structure:
     }
 }
 """
+#NOTA: Os documentos de origem Scopus API já vêm formatados, pelo que não é necessário formatá-los novamente.
 
 import json
 import glob
@@ -26,7 +27,6 @@ from datetime import datetime
 
 SCRIPT_DIR = Path(__file__).parent
 DOCUMENTS_DIR = SCRIPT_DIR / "documents"
-
 
 def load_formatted_documents_from_directory(source_dir, origin_label, pattern="*.json"):
 
@@ -199,7 +199,10 @@ def merge_and_save(newsletter_docs, repo_docs, api_docs, chunk_size=1000):
     for i in range(0, len(items), chunk_size):
         chunk = dict(items[i:i + chunk_size])
 
-        output_file = DOCUMENTS_DIR / "formatted_docs" / f"documents_formatted_{total_files + 1}.json"
+        formatted_dir = DOCUMENTS_DIR / "formatted_docs"
+        formatted_dir.mkdir(exist_ok=True)
+
+        output_file = formatted_dir / f"documents_formatted_{total_files + 1}.json"
 
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(chunk, f, ensure_ascii=False, indent=2)

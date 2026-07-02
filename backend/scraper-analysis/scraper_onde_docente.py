@@ -26,8 +26,6 @@ ESCS_DEPARTAMENTOS = [
 OUTPUT_FILE = "escolas/departamentos.json"
 RETRIES = 3
 
-Path("escolas").mkdir(exist_ok=True)
-
 def define_base_url(escola):
     match escola:
         case "ESELX":
@@ -223,4 +221,5 @@ def main():
         scrape_departamentos(escola)
 
 if __name__ == "__main__":
+    Path("escolas").mkdir(parents=True, exist_ok=True)
     main()

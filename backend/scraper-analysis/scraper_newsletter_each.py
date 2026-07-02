@@ -16,9 +16,6 @@ CONCURRENT_REQUESTS = 5
 RETRIES = 3
 NUM_SCRAPERS = 5
 
-# Ensure documents directory exists
-BASE_PATH.mkdir(exist_ok=True)
-
 semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 
 
@@ -262,5 +259,7 @@ async def main():
     await scrape_newsletters_parallel(links, NUM_SCRAPERS, force_full=force_full)
 
 if __name__ == "__main__":
+    # Ensure documents directory exists
+    BASE_PATH.mkdir(parents=True, exist_ok=True)
     asyncio.run(main())
 

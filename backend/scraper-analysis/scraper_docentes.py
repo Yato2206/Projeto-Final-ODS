@@ -25,8 +25,6 @@ START_PAGE = 0
 ISCAL_PAGE_URL = "https://www.iscal.ipl.pt/docentes?page="
 ISEL_PAGE_URL = "https://www.isel.pt/docentes?page="
 
-Path("escolas").mkdir(exist_ok=True)
-
 DIRECT_URLS = {
     "ESD": "https://www.esd.ipl.pt/docentes",
     "ESTC": "https://www.estc.ipl.pt/docentes",
@@ -392,4 +390,5 @@ async def main():
     print(f"{'='*50}\n")
 
 if __name__ == "__main__":
+    Path("escolas").mkdir(parents=True, exist_ok=True)
     asyncio.run(main())

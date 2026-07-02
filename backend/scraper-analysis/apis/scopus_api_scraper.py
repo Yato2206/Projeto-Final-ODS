@@ -11,7 +11,6 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).parent
 DOCUMENTS_DIR = Path(BASE_DIR, "../documents/scopus")
-DOCUMENTS_DIR.mkdir(exist_ok=True)
 
 def get_prev_data_count():
     return len(list(DOCUMENTS_DIR.glob("scopus_*_*.json")))
@@ -112,4 +111,5 @@ def main():
         processar_ano(year, period_to_search, folder_path)
 
 if __name__ == "__main__":
+    DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
     main()

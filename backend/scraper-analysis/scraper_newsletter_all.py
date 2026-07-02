@@ -13,9 +13,6 @@ OUTPUT_FILE = "documents/newsletter/newsletter_links.json"
 RETRIES = 3
 MIN_ITEMS_PER_PAGE = 10
 
-# Ensure documents directory exists
-Path("documents/newsletter/").mkdir(exist_ok=True)
-
 #esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def load_existing_data():
     """Load existing newsletter data"""
@@ -175,4 +172,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # Ensure documents directory exists
+    Path("documents/newsletter/").mkdir(parents=True, exist_ok=True)
     main()

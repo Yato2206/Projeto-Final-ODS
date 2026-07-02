@@ -32,9 +32,6 @@ SELECTORS: dict[str, str] = {
     "ISEL":  ".node__content",
 }
 
-Path("escolas").mkdir(exist_ok=True)
-
-
 REQUEST_TIMEOUT = 10
 
 #FICHEIRO UTILIS
@@ -230,4 +227,5 @@ async def main():
     print(f"{'='*50}\n")
 
 if __name__ == "__main__":
+    Path("escolas").mkdir(parents=True, exist_ok=True)
     asyncio.run(main())
