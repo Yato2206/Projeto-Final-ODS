@@ -222,7 +222,8 @@ def test_parse_newsletter_content_date_checked_e_iso_valido():
     datetime.fromisoformat(resultado["dateChecked"])
 
 def test_parse_newsletter_content():
-    html = Path("test_data/newsletter_sample.html").read_text(encoding="utf-8")
+    Base_path = Path(__file__).parent
+    html = (Base_path / "test_data/newsletter_sample.html").read_text(encoding="utf-8")
     newsletter_id = "123"
     data_publicacao = "2026-06-20"
     link = "https://www.ipl.pt/newsletter/123"

@@ -14,7 +14,7 @@ RETRIES = 3
 MIN_ITEMS_PER_PAGE = 10
 
 # Ensure documents directory exists
-Path("documents").mkdir(exist_ok=True)
+Path("documents/newsletter/").mkdir(exist_ok=True)
 
 #esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def load_existing_data():

@@ -9,7 +9,7 @@ import sys
 import logging
 
 logging.basicConfig(
-    level=logging.INFO,          # <-- sem isto, INFO fica escondido por defeito (default é WARNING)
+    level=logging.INFO,         
     format="%(asctime)s  %(levelname)-8s  %(message)s",
     datefmt="%H:%M:%S",
 )
@@ -18,7 +18,8 @@ log = logging.getLogger(__name__)
 ITEMS_PER_FILE = 1000
 BATCH_SIZE = 100
 HEADLESS = True  # Muda para False para ver os browsers
-DOCUMENTS_DIR = Path("documents")
+DOCUMENTS_DIR = Path("documents/repo_cientifico")
+DOCUMENTS_DIR.mkdir(exist_ok=True)
 
 CURRENT_YEAR = datetime.now().year
 
@@ -31,10 +32,10 @@ items_in_current_file = 0
 file_lock = asyncio.Lock()
 
 def get_data_filename(index):
-    return str(DOCUMENTS_DIR / "repo_cientifico" / f"repo_cientifico_{index}.json")
+    return str(DOCUMENTS_DIR / f"repo_cientifico_{index}.json")
 
 def get_current_file_index():
-    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico" / "repo_cientifico_*.json"))
+    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
     if not existing_files:
         return 1
     indices = []
@@ -51,7 +52,7 @@ def load_all_existing_data():
     done_links = set()
     total_count = 0
 
-    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico" / "repo_cientifico_*.json"))
+    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
     for file in existing_files:
         try:
             with open(file, "r", encoding="utf-8") as f:

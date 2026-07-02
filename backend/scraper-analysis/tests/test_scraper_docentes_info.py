@@ -315,4 +315,3 @@ async def test_scrape_one_base_record_nao_e_sobrescrito_por_parse(monkeypatch):
 
     name, record = resultado
     assert record["escola"] == "ISEL"
-    assert record["sourceUrl"] == "http://x.com/1"

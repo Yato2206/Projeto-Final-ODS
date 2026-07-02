@@ -9,7 +9,9 @@ import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-DOCUMENTS_DIR = Path("documents")
+BASE_DIR = Path(__file__).parent
+DOCUMENTS_DIR = Path(BASE_DIR, "../documents/scopus")
+DOCUMENTS_DIR.mkdir(exist_ok=True)
 
 def get_prev_data_count():
     return len(list(DOCUMENTS_DIR.glob("scopus_*_*.json")))
@@ -104,8 +106,7 @@ def main():
     # por defeito, serão 7 dias (uma semana) para atualizar, gastando tokens apenas 1 vez por semana
     period_to_search = 7
 
-    folder_path = os.path.join(os.getcwd(), "documents")
-    os.makedirs(folder_path, exist_ok=True)
+    folder_path = os.path.join(os.getcwd(), DOCUMENTS_DIR)
 
     for year in range(first_year, current_year + 1):
         processar_ano(year, period_to_search, folder_path)
