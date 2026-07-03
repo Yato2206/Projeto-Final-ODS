@@ -10,6 +10,7 @@ from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+from utilis import fetch_async, _print_summary
 
 # Schools can be processed one by one. Keep this list aligned with the current scrape scope.
 escolas = ["ESCS", "ESD", "ESELX", "ESML", "ESTC", "ESSL", "ISCAL", "ISEL"]
@@ -103,7 +104,7 @@ async def save_data(new_data):
  
     print(f"Saved — total records in file: {len(sorted_data)}")
 
-
+#NOTA: este e um pouco diferente. Nota para lembrar
 def load_existing_data(escola):
     """Load scraped docentes data."""
     data = _load_json(OUTPUT_FILE)
@@ -122,25 +123,6 @@ def load_existing_data(escola):
         return merged
  
     return {key: value for key, value in data.items() if isinstance(value, dict) and value.get("escola") == escola}
-
-#================================================
-# HTTP
-#================================================
-async def fetch(session, semaphore, url, escola):
-    """Fetch page with retries."""
-    for attempt in range(RETRIES):
-        try:
-            async with semaphore:
-                async with session.get(url, timeout=REQUEST_TIMEOUT) as response:
-                    response.raise_for_status()
-                    return await response.text()
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            if attempt < RETRIES - 1:
-                await asyncio.sleep(2 ** attempt)
-            else:
-                print(f"[{escola}] Failed to fetch {url}: {e}")
-    return None
-
 
 #================================================
 # PARSING
@@ -261,7 +243,7 @@ async def scrape_paginated_source(session, semaphore, escola, page_url, max_per_
 
     while True:
         url = f"{page_url}{page}"
-        html = await fetch(session, semaphore, url, escola)
+        html = await fetch_async(session, semaphore, url, debug_tag=escola)
         if not html:
             print(f"[{escola}] No content on page {page}")
             break
@@ -301,7 +283,7 @@ async def scrape_one(session, semaphore, escola, link_info, existent_keys):
         return {}
  
     print(f"[{escola}] Scraping {url}...")
-    html = await fetch(session, semaphore, url, escola)
+    html = await fetch_async(session, semaphore, url, debug_tag=escola)
     if not html:
         return {}
  
@@ -364,6 +346,7 @@ async def scrape_escola(session, semaphore, escola):
         all_data.update(chunk)
  
     new_count = len(all_data) - len(existing_data)
+    _print_summary(existing_data, all_data)
     print(f"\n[{escola}] Completed")
     return all_data
 

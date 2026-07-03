@@ -6,50 +6,13 @@ import sys
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from utilis import load_existing_data, save_data, fetch, _print_summary
 
 # Configuração
 BASE_URL = "https://www.ipl.pt/estudar/cursos/"
 OUTPUT_FILE = "documents/cursos/cursos_links.json"
 RETRIES = 3
 MIN_ITEMS_PER_PAGE = 12
-
-#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def load_existing_data():
-    """Load existing newsletter data"""
-    if Path(OUTPUT_FILE).exists():
-        with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def save_data(data):
-    """Save newsletter data to file, sorted by scraped date (dateChecked)"""
-    sorted_data = dict(sorted(
-        data.items(),
-        key=lambda item: item[1].get("dateChecked", ""),
-        reverse=True
-    ))
-
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(sorted_data, f, ensure_ascii=False, indent=2)
-    print(f"Cursos saved! Total items: {len(sorted_data)}")
-
-#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def fetch(url):
-    """Fetch page with retries"""
-    for attempt in range(RETRIES):
-        try:
-            request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urlopen(request, timeout=10) as response:
-                return response.read().decode("utf-8")
-        except (HTTPError, URLError, TimeoutError) as e:
-            if attempt < RETRIES - 1:
-                sleep(2 ** attempt)
-            else:
-                print(f"Failed to fetch {url}: {e}")
-                return None
-    return None
-
 
 def parse_page(html):
     """Parse page and extract cursos items"""
@@ -146,25 +109,13 @@ def _scrape_sequential(start_page, existing_data, curso, all_shared, prefix="[Se
         page += 1
         sleep(1)
 
-#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def _print_summary(existing_data, all_cursos):
-    """Print scraping summary"""
-    new_count = len(all_cursos) - len(existing_data)
-    print(f"\n{'='*50}")
-    print(f"Scraping completed!")
-    print(f"Previous items: {len(existing_data)}")
-    print(f"New items: {new_count}")
-    print(f"Total items: {len(all_cursos)}")
-    print(f"{'='*50}")
-
-
 def scrape_cursos(force_full=False):
     """Scrape all cursos pages"""
     if force_full and Path(OUTPUT_FILE).exists():
         Path(OUTPUT_FILE).unlink()
         print(f"Removed existing {OUTPUT_FILE} before full scrape")
 
-    previous_data = load_existing_data()
+    previous_data = load_existing_data(OUTPUT_FILE)
     existing_data = {} if force_full else previous_data
     print(f"Loaded {len(existing_data)} existing items")
 
@@ -173,7 +124,8 @@ def scrape_cursos(force_full=False):
     for curso in ["licenciaturas", "mestrados", "pos-graduacoes"]:
         _scrape_sequential(0, existing_data, curso, all_cursos, prefix=f"[{curso.capitalize()}]")
 
-    save_data(all_cursos)
+    sort_key = "dateChecked"
+    save_data(all_cursos, sort_key, OUTPUT_FILE)
     _print_summary(existing_data, all_cursos)
 
 
@@ -182,7 +134,6 @@ def main():
     print(f"Cursos Scraper")
     print(f"{'='*50}\n")
 
-    # Optional force mode: py .\scraper-python-cursos-all.py true
     force_full = len(sys.argv) > 1 and sys.argv[1].strip().lower() == "true"
     if force_full:
         print("Force mode enabled: full scrape from page 0 (ignoring existing items)")

@@ -10,6 +10,7 @@ from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+from utilis import fetch_async
 
 
 INPUT_FILE = "escolas/docentes.json"
@@ -79,23 +80,6 @@ def load_all_links():
                 links.append({"name": nome, "link": link, "escola": escola})
 
     return links
-
-#================================================
-# HTTP
-#================================================
-async def fetch(session, semaphore, url, name):
-    for attempt in range(RETRIES):
-        try:
-            async with semaphore:
-                async with session.get(url, timeout=REQUEST_TIMEOUT) as response:
-                    response.raise_for_status()
-                    return await response.text()
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            if attempt < RETRIES - 1:
-                await asyncio.sleep(2 ** attempt)
-            else:
-                print(f"[{name}] Failed to fetch {url}: {e}")
-    return None
 
 #================================================
 # PARSING
@@ -182,7 +166,7 @@ async def scrape_one(session, semaphore, entry, existing_keys):
         return name, base_record(escola, url)
 
     print(f"Scraping {name} — {url}")
-    html = await fetch(session, semaphore, url, name)
+    html = await fetch_async(session, semaphore, url, debug_tag=name)
     if not html:
         return None
 

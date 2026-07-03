@@ -1,4 +1,3 @@
-#from utilis import load_existing_data
 import json
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -7,6 +6,7 @@ import sys
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from utilis import load_existing_data, save_data, fetch, _print_summary
 
 #Provavelmente sera partilhado
 escolas = ["ESCS", "ESD", "ESELX", "ESML", "ESTC", "ESSL", "ISCAL", "ISEL"]
@@ -37,43 +37,6 @@ def define_base_url(escola):
         case _:
             return None
 
-#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def load_existing_data():
-    """Load existing departamentos data"""
-    if Path(OUTPUT_FILE).exists():
-        with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def save_data(data):
-    """Save departamentos data to file, sorted by publication date"""
-    # Sort by date (descending order - newest first)
-    sorted_data = dict(sorted(
-        data.items(),
-        key=lambda item: item[1].get("dateChecked", ""),
-        reverse=True
-    ))
-
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(sorted_data, f, ensure_ascii=False, indent=2)
-    print(f"Departamentos saved! Total items: {len(sorted_data)}")
-
-#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def fetch(url):
-    """Fetch page with retries"""
-    for attempt in range(RETRIES):
-        try:
-            request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urlopen(request, timeout=10) as response:
-                return response.read().decode("utf-8")
-        except (HTTPError, URLError, TimeoutError) as e:
-            if attempt < RETRIES - 1:
-                sleep(2 ** attempt)
-            else:
-                print(f"Failed to fetch {url}: {e}")
-                return None
-    return None
 
 """
     o ESD, o ESTC, ESSL e o ISCAL não possuem uma secção de departamento como as demais escolas para poder depois buscar os docentes por departamento
@@ -174,23 +137,11 @@ def scrape_sequential(escola, existing_data, all_deps_shared, prefix="[Sequentia
         print(f"  {prefix} No new items found → All updates already scraped, stopping")
         return
 
-#esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def _print_summary(existing_data, all_news):
-    """Print scraping summary"""
-    new_count = len(all_news) - len(existing_data)
-    print(f"\n{'='*50}")
-    print(f"Scraping completed!")
-    print(f"Previous items: {len(existing_data)}")
-    print(f"New items: {new_count}")
-    print(f"Total items: {len(all_news)}")
-    print(f"{'='*50}")
-
-
 #    o ESCS é um caso especial. Apesar de possuir departamentos, não é possível realizar o scrape desses departamentos, pelo que têm de ser
 #    fornecidos diretamente.
 def scrape_departamentos(escola):
     """Scrape departamentos for all schools"""
-    existing_data = load_existing_data()
+    existing_data = load_existing_data(OUTPUT_FILE)
     print(f"Loaded {len(existing_data)} existing items")
 
     all_deps = dict(existing_data)
@@ -206,7 +157,8 @@ def scrape_departamentos(escola):
 
     scrape_sequential(escola, existing_data, all_deps)
 
-    save_data(all_deps)
+    sort_key = "dateChecked"
+    save_data(all_deps, sort_key, OUTPUT_FILE)
     _print_summary(existing_data, all_deps) #NOTA para cada link diferente, o ficheiro e aberto e fechado por isso o numero no final de novos items pode nao corresponder com o de facto adicionado
 
 def main():
