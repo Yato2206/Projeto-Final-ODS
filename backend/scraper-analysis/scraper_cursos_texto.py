@@ -9,9 +9,9 @@ from urllib.parse import urlparse
 import re
 
 # Configuração
-BASE_PATH = Path("documents/newsletter/")
-INPUT_FILE = BASE_PATH / "newsletter_links.json"
-OUTPUT_FILE = BASE_PATH / "newsletter_content.json"
+BASE_PATH = Path("documents/cursos/")
+INPUT_FILE = BASE_PATH / "cursos_links.json"
+OUTPUT_FILE = BASE_PATH / "cursos_content.json"
 CONCURRENT_REQUESTS = 5
 RETRIES = 3
 NUM_SCRAPERS = 5
@@ -20,8 +20,8 @@ semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 
 
 #esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
-def load_newsletter_links():
-    """Load newsletter links from file"""
+def load_cursos_links():
+    """Load cursos links from file"""
     if not Path(INPUT_FILE).exists():
         print(f"Error: {INPUT_FILE} not found")
         return []
@@ -33,9 +33,10 @@ def load_newsletter_links():
     links = []
     for title, info in data.items():
         links.append({
-            "titulo": title,
-            "link": info.get("link"),
-            "dataPublicacao": info.get("dataPublicacao")
+            "titulo": info.get("curso"),
+            "link": title,
+            "tipoCurso": info.get("tipoCurso"),
+            "escola": info.get("escola")
         })
 
     return links
@@ -43,7 +44,7 @@ def load_newsletter_links():
 
 #esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def load_existing_data():
-    """Load existing newsletter content"""
+    """Load existing curso content"""
     if Path(OUTPUT_FILE).exists():
         with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -52,7 +53,7 @@ def load_existing_data():
 
 #esta funcao ficara num ficheiro utils e sera importada para os outros scrapers, para evitar a duplicacao de codigo
 def save_data(data):
-    """Save newsletter content to file, sorted by publication date"""
+    """Save curso content to file, sorted by publication date"""
     # Sort by publication date (newest first)
     sorted_data = dict(sorted(
         data.items(),
@@ -84,14 +85,7 @@ async def fetch(session, url):
                 return None
     return None
 
-def extract_newsletter_id(url):
-    """Extract newsletter ID from URL"""
-    parsed = urlparse(url)
-    parts = parsed.path.split("/")
-    last_part = parts[-1] if parts else ""
-    return last_part if last_part and last_part[-1].isdigit() else "unknown"
-
-def parse_newsletter_content(html, newsletter_id, data_publicacao, link):
+def parse_newsletter_content(html, titulo, tipoCurso, escola, link):
     """Parse newsletter HTML and extract content"""
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -105,78 +99,38 @@ def parse_newsletter_content(html, newsletter_id, data_publicacao, link):
         text = re.sub(r"\s+\)", ")", text)
         return text
 
-    content_main = soup.select_one(".content-main")
+    content_main = soup.select_one(".node__content.clearfix")
     if not content_main:
         return None
 
-    # Extract main title and text
-    titulo_elem = content_main.select_one(".title-body h1")
-    titulo = normalize_text(titulo_elem.get_text(" ", strip=True) if titulo_elem else "")
-
-    title_body = content_main.select_one(".title-body")
-    if title_body:
-        intro_paragraphs = []
-        for p in title_body.select("p"):
-            cleaned = normalize_text(p.get_text(" ", strip=True))
-            if cleaned:
-                intro_paragraphs.append(cleaned)
-        texto = normalize_text(" ".join(intro_paragraphs))
-    else:
-        texto = ""
-
-    # Extract campo aberto (news items)
-    campo_aberto = []
-    container = content_main.select_one(".field--name-field-campo-aberto-grupo-3")
-
-    if container:
-        for h2 in container.find_all("h2"):
-            h2_titulo = normalize_text(h2.get_text(" ", strip=True))
-
-            # Get all <p> tags until next <h2>
-            paragraphs = []
-            for sibling in h2.find_next_siblings():
-                if sibling.name == "h2":
-                    break
-                if sibling.name == "p":
-                    cleaned = normalize_text(sibling.get_text(" ", strip=True))
-                    if cleaned:
-                        paragraphs.append(cleaned)
-
-            h2_texto = normalize_text(" ".join(paragraphs))
-
-            campo_aberto.append({
-                "titulo": h2_titulo,
-                "texto": h2_texto
-            })
+    texto = content_main.select_one(".field--name-body")
+    if not texto:
+        return None
 
     return {
-        "titulo": f"Newsletter: {newsletter_id}",
+        "curso": titulo,
         "link": link,
-        "politecnicoTitulo": titulo,
-        "politecnicoTexto": texto,
-        "noticias": campo_aberto,
-        "dataPublicacao": data_publicacao,
-        "tipo": "Newsletter",
+        "escola": escola,
+        "texto": texto.get_text(separator="\n", strip=True),
+        "tipoCurso": tipoCurso,
         "dateChecked": datetime.now().isoformat()
     }
 
 async def scrape_newsletter(session, link_info, existing_data):
     """Scrape a single newsletter"""
     url = link_info["link"]
-    newsletter_id = extract_newsletter_id(url)
-    data_publicacao = link_info.get("dataPublicacao", "")
-
-    print(f"  Scraping newsletter {newsletter_id}...")
-
+    titulo = link_info.get("titulo", "")
+    tipoCurso = link_info.get("tipoCurso", "")
+    escola = link_info.get("escola", "")
     html = await fetch(session, url)
     if not html:
         return None
 
-    content = parse_newsletter_content(html, newsletter_id, data_publicacao, url)
+    content = parse_newsletter_content(html, titulo, tipoCurso, escola, url)
     if content:
-        titulo = content["titulo"]
-        if titulo not in existing_data:
-            return titulo, content
+        curso = content["link"]
+        if curso not in existing_data:
+            return curso, content
 
     return None
 
@@ -238,11 +192,11 @@ async def scrape_newsletters_parallel(links, num_scrapers=NUM_SCRAPERS, force_fu
 
 async def main():
     print(f"\n{'='*50}")
-    print(f"Newsletter Content Scraper")
+    print(f"Curso Content Scraper")
     print(f"{'='*50}\n")
 
-    # Load newsletters to scrape
-    links = load_newsletter_links()
+    # Load cursos to scrape
+    links = load_cursos_links()
 
     if not links:
         print("No links to scrape")
@@ -253,7 +207,7 @@ async def main():
     if force_full:
         print("Force mode enabled: full scrape from page 0 (ignoring existing items)")
 
-    print(f"Found {len(links)} newsletters to process\n")
+    print(f"Found {len(links)} cursos to process\n")
 
     # Scrape in parallel
     await scrape_newsletters_parallel(links, NUM_SCRAPERS, force_full=force_full)
@@ -262,4 +216,3 @@ if __name__ == "__main__":
     # Ensure documents directory exists
     BASE_PATH.mkdir(parents=True, exist_ok=True)
     asyncio.run(main())
-

@@ -99,6 +99,8 @@ def process_files_and_save(files_pattern, chunk_size=1000):
                 continue
 
             titulo = info.get("titulo", "")
+            if not titulo:
+                titulo = info.get("curso", "")
             texto_conteudo = info.get("texto", "")
 
             print(f"A analisar {url}")
