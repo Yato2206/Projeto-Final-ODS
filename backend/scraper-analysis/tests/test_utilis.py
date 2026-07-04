@@ -7,6 +7,7 @@ import json
 import utilis as utilis
 from urllib.error import HTTPError
 from datetime import datetime
+from bs4 import BeautifulSoup
 
 def test_load_existing_data_ficheiro(tmp_path):
     ficheiro = tmp_path / "data.json"
@@ -411,3 +412,343 @@ async def test_fetch_async_falha_todas_as_tentativas(monkeypatch):
 
     assert resultado is None
     assert mock_session.get.call_count == retries
+
+
+def test_scrape_sequential_sem_curso(monkeypatch):
+    html_page_0 = "<div class='view-content-wrap'>" + \
+        "".join(f'<div class="item"><div class="views-field-title"><a href="/n{i}">Newsletter {i}</a></div></div>' for i in range(10)) + \
+        "</div>" # simula uma página com 10 itens
+    html_page_1 = """
+        <div class="view-content-wrap">
+            <div class="item"><div class="views-field-title"><a href="/n10">Newsletter 10</a></div></div>
+        </div>
+    """
+    chamadas = {"n": 0}
+    
+    def mock_fetch(url):
+        chamadas["n"] += 1
+        return html_page_0 if chamadas["n"] == 1 else html_page_1
+
+    def fake_parse_page(html, curso=None):
+        soup = BeautifulSoup(html, 'html.parser')
+        items = soup.find_all('div', class_='item')
+        links = {}
+        for item in items:
+            title_tag = item.find('a')
+            if title_tag:
+                title = title_tag.get('href')
+                links[title] = None
+        return links
+
+    all_news = {}
+    base_url = "http://exemplo.com"
+    min_page_items = 10
+    monkeypatch.setattr(utilis, 'fetch', mock_fetch)
+    monkeypatch.setattr(utilis, 'sleep', lambda x: None)  # Evita delays durante o teste
+    utilis._scrape_sequential(base_url, fake_parse_page, 0, {}, all_news, min_page_items, curso=None)
+    assert len(all_news) == 11
+    assert chamadas["n"] == 2
+
+def test_scrape_sequential_sem_curso_default(monkeypatch):
+    html_page_0 = "<div class='view-content-wrap'>" + \
+        "".join(f'<div class="item"><div class="views-field-title"><a href="/n{i}">Newsletter {i}</a></div></div>' for i in range(10)) + \
+        "</div>" # simula uma página com 10 itens
+    html_page_1 = """
+        <div class="view-content-wrap">
+            <div class="item"><div class="views-field-title"><a href="/n10">Newsletter 10</a></div></div>
+        </div>
+    """
+    chamadas = {"n": 0}
+    
+    def mock_fetch(url):
+        chamadas["n"] += 1
+        return html_page_0 if chamadas["n"] == 1 else html_page_1
+
+    def fake_parse_page(html, curso=None):
+        soup = BeautifulSoup(html, 'html.parser')
+        items = soup.find_all('div', class_='item')
+        links = {}
+        for item in items:
+            title_tag = item.find('a')
+            if title_tag:
+                title = title_tag.get('href')
+                links[title] = None
+        return links
+
+    all_news = {}
+    base_url = "http://exemplo.com"
+    min_page_items = 10
+    monkeypatch.setattr(utilis, 'fetch', mock_fetch)
+    monkeypatch.setattr(utilis, 'sleep', lambda x: None)  # Evita delays durante o teste
+    utilis._scrape_sequential(base_url, fake_parse_page, 0, {}, all_news, min_page_items)
+    assert len(all_news) == 11
+    assert chamadas["n"] == 2
+
+def test_scrape_sequential_com_curso(monkeypatch):
+    html_page_0 = "<div class='view-content-wrap'>" + \
+        "".join(f'<div class="item"><div class="views-field-title"><a href="/n{i}">Newsletter {i}</a></div></div>' for i in range(10)) + \
+        "</div>" # simula uma página com 10 itens
+    html_page_1 = """
+        <div class="view-content-wrap">
+            <div class="item"><div class="views-field-title"><a href="/n10">Newsletter 10</a></div></div>
+        </div>
+    """
+    chamadas = {"n": 0}
+    
+    def mock_fetch(url):
+        chamadas["n"] += 1
+        return html_page_0 if chamadas["n"] == 1 else html_page_1
+
+    def fake_parse_page(html, curso=None):
+        soup = BeautifulSoup(html, 'html.parser')
+        items = soup.find_all('div', class_='item')
+        links = {}
+        for item in items:
+            title_tag = item.find('a')
+            if title_tag:
+                title = title_tag.get('href')
+                links[title] = None
+        return links
+
+    all_news = {}
+    base_url = "http://exemplo.com"
+    min_page_items = 10
+    monkeypatch.setattr(utilis, 'fetch', mock_fetch)
+    monkeypatch.setattr(utilis, 'sleep', lambda x: None)  # Evita delays durante o teste
+    curso = "ISEL"
+    utilis._scrape_sequential(base_url, fake_parse_page, 0, {}, all_news, min_page_items, curso=curso)
+    assert len(all_news) == 11
+    assert chamadas["n"] == 2
+
+def test_scrape_sequential_sem_items_novos(monkeypatch):
+    html = """
+        <div class="view-content-wrap">
+            <div class="item"><div class="views-field-title"><a href="/ja/existe">Newsletter Já Existente</a></div></div>
+        </div>
+    """
+
+    def fake_parse_page(html, curso=None):
+        soup = BeautifulSoup(html, 'html.parser')
+        items = soup.find_all('div', class_='item')
+        links = {}
+        for item in items:
+            title_tag = item.find('a')
+            if title_tag:
+                title = title_tag.get('href')
+                links[title] = None
+        return links
+
+    chamadas = {"n": 0}
+    def mock_fetch(url):
+        chamadas["n"] += 1
+        return html
+
+    monkeypatch.setattr(utilis, 'fetch', mock_fetch)
+    monkeypatch.setattr(utilis, 'sleep', lambda x: None) 
+    
+    existing_data = {"/ja/existe": {"link": "https://www.ipl.pt/ja/existe"}}
+    all_news = dict(existing_data)  
+    base_url = "http://exemplo.com"
+    min_page_items = 10 
+    utilis._scrape_sequential(base_url, fake_parse_page, 0, existing_data, all_news, min_page_items)
+    
+    assert len(all_news) == 1 
+    assert chamadas["n"] == 1  
+
+def test_scrape_sequential_com_items_novos_e_existentes_mesma_pagina(monkeypatch):
+    html_existente = """
+        <div class="view-content-wrap">
+            <div class="item"><div class="views-field-title"><a href="/ja/existe">Newsletter Já Existente</a></div></div>
+        </div>
+    """
+
+    html_novo = """
+        <div class="view-content-wrap">
+            <div class="item"><div class="views-field-title"><a href="/novo">Newsletter Nova</a></div></div>
+        </div>
+    """
+
+    def fake_parse_page(html, curso=None):
+        soup = BeautifulSoup(html, 'html.parser')
+        items = soup.find_all('div', class_='item')
+        links = {}
+        for item in items:
+            title_tag = item.find('a')
+            if title_tag:
+                title = title_tag.get('href')
+                links[title] = None
+        return links
+
+    existing_data = {"Newsletter Já Existente": {"link": "https://www.ipl.pt/ja/existe"}}
+    all_news = dict(existing_data)  # Copia para simular o estado inicial
+
+    chamadas = {"n": 0}
+    
+    def mock_fetch(url):
+        chamadas["n"] += 1
+        return html_novo if chamadas["n"] == 1 else html_existente
+
+    monkeypatch.setattr(utilis, 'fetch', mock_fetch)
+    monkeypatch.setattr(utilis, 'sleep', lambda x: None)
+    base_url = "http://exemplo.com"
+    min_page_items = 10
+    utilis._scrape_sequential(base_url, fake_parse_page, 0, existing_data, all_news, min_page_items)
+    assert chamadas["n"] == 1
+    assert len(all_news) == 2  # Um item existente e um novo
+    
+def test_scrape_sequential_pagina_com_items_novos_e_existentes(monkeypatch):
+    items_html = "".join(
+        f'<div class="item"><div class="views-field-title"><a href="/item{i}">Newsletter {i}</a></div></div>'
+        for i in range(10)
+    )
+    html_pagina_0 = f'<div class="view-content-wrap">{items_html}</div>'
+    html_pagina_1 = '<div class="view-content-wrap"></div>'
+
+    def fake_parse_page(html, curso=None):
+        soup = BeautifulSoup(html, 'html.parser')
+        items = soup.find_all('div', class_='item')
+        links = {}
+        for item in items:
+            title_tag = item.find('a')
+            if title_tag:
+                title = title_tag.get('href')
+                links[title] = None
+        return links
+
+    existing_data = {
+        "/item9": None,
+        "/item8": None,
+    }
+    all_news = dict(existing_data)
+
+    chamadas = {"n": 0}
+    def mock_fetch(url):
+        chamadas["n"] += 1
+        return html_pagina_0 if chamadas["n"] == 1 else html_pagina_1
+
+    base_url = "http://exemplo.com"
+    min_page_items = 10
+    monkeypatch.setattr(utilis, 'fetch', mock_fetch)
+    monkeypatch.setattr(utilis, 'sleep', lambda x: None)
+    utilis._scrape_sequential(base_url, fake_parse_page, 0, existing_data, all_news, min_page_items)
+
+    print(all_news)
+
+    assert len(all_news) == 10          # 2 existentes + 8 novos
+    assert chamadas["n"] == 2           # avançou para a página 1 (10 itens == MIN_ITEMS_PER_PAGE)~
+
+
+@pytest.mark.asyncio
+async def test_scrape_chunk_adiciona_todos_os_resultados():
+    async def fake_scrape(session, link_info, existing_data, semaphore):
+        return (link_info["link"], {"titulo": link_info["link"]})
+
+    chunk = [{"link": "/a"}, {"link": "/b"}, {"link": "/c"}]
+    all_data_shared = {}
+    semaphore = asyncio.Semaphore(1)
+
+    await utilis._scrape_chunk(None, chunk, {}, all_data_shared, semaphore, fake_scrape)
+
+    assert len(all_data_shared) == 3
+    assert "/a" in all_data_shared
+
+
+@pytest.mark.asyncio
+async def test_scrape_chunk_erro_num_item_nao_bloqueia_os_outros():
+    async def fake_scrape(session, link_info, existing_data, semaphore):
+        if link_info["link"] == "/falha":
+            raise Exception("erro simulado")
+        return (link_info["link"], {"titulo": link_info["link"]})
+
+    chunk = [{"link": "/a"}, {"link": "/falha"}, {"link": "/c"}]
+    all_data_shared = {}
+    semaphore = asyncio.Semaphore(1)
+
+    await utilis._scrape_chunk(None, chunk, {}, all_data_shared, semaphore, fake_scrape)
+
+    assert len(all_data_shared) == 2          # "/falha" não entrou, os outros sim
+    assert "/falha" not in all_data_shared
+    assert "/a" in all_data_shared
+    assert "/c" in all_data_shared
+
+
+@pytest.mark.asyncio
+async def test_scrape_chunk_resultado_none_nao_adiciona_nada():
+    async def fake_scrape(session, link_info, existing_data, semaphore):
+        return None  # já existia, ou falhou o parse
+
+    chunk = [{"link": "/a"}, {"link": "/b"}]
+    all_data_shared = {}
+    semaphore = asyncio.Semaphore(1)
+
+    await utilis._scrape_chunk(None, chunk, {}, all_data_shared, semaphore, fake_scrape)
+
+    assert all_data_shared == {}
+
+
+@pytest.mark.asyncio
+async def test_scrape_parallel_divide_em_chunks_corretamente(monkeypatch, tmp_path):
+    ficheiro = tmp_path / "data.json"
+    ficheiro.write_text('{"Antigo": {}}', encoding="utf-8")
+    chunks_recebidos = []
+
+    async def fake_scrape_chunk(session, chunk, existing_data, all_data_shared, semaphore, scrape_func, prefix=""):
+        chunks_recebidos.append(chunk)
+        for item in chunk:
+            all_data_shared[item["link"]] = {"titulo": item["link"]}
+
+    monkeypatch.setattr(utilis, "_scrape_chunk", fake_scrape_chunk)
+    monkeypatch.setattr(utilis, "load_existing_data", lambda output_file: {})
+    monkeypatch.setattr(utilis, "save_data", lambda data, sort_key, output_file: None)
+    monkeypatch.setattr(utilis, "aiohttp", type("FakeAiohttp", (), {
+        "ClientSession": lambda *a, **k: _FakeSession()
+    }))
+
+    links = [{"link": f"/{i}"} for i in range(10)]
+    semaphore = asyncio.Semaphore(1)
+ 
+    def fake_scrape_something(links, semaphore, num_scrapers):
+        pass
+
+    sort_key = "titulo"
+    await utilis.scrape_parallel(ficheiro, links, semaphore, sort_key, fake_scrape_something, 3, False)
+
+    total_distribuido = sum(len(c) for c in chunks_recebidos)
+    assert total_distribuido == 10
+    assert len(chunks_recebidos) == 3   # ou 4, dependendo do arredondamento — confirma o teu chunk_size
+
+
+class _FakeSession:
+    async def __aenter__(self):
+        return self
+    async def __aexit__(self, *a):
+        return None
+
+@pytest.mark.asyncio
+async def test_scrape_parallel_force_full_ignora_dados_antigos(monkeypatch, tmp_path):
+    ficheiro = tmp_path / "data.json"
+    ficheiro.write_text('{"Antigo": {}}', encoding="utf-8")
+    semaphore = asyncio.Semaphore(1)
+
+    monkeypatch.setattr(utilis, "load_existing_data", lambda output_file: {"Antigo": {}})
+    monkeypatch.setattr(utilis, "_scrape_chunk", AsyncMock())
+    monkeypatch.setattr(utilis, "save_data", lambda data, sort_key, output_file: None)
+
+    dados_guardados = {}
+    def fake_save(data, sort_key, output_file):
+        dados_guardados.update(data)
+    monkeypatch.setattr(utilis, "save_data", fake_save)
+
+    class _FakeSession:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return None
+    monkeypatch.setattr(utilis.aiohttp, "ClientSession", lambda *a, **k: _FakeSession())
+
+    sort_key = "titulo"
+    def fake_scrape_something(links, semaphore, num_scrapers):
+        return {link["link"]: {"titulo": link["link"]} for link in links}
+    num_scrapers = 3
+
+    await utilis.scrape_parallel(ficheiro, [], semaphore, sort_key, fake_scrape_something, num_scrapers, force_full=True)
+
+    assert not ficheiro.exists()  # foi apagado por force_full antes de gravar de novo

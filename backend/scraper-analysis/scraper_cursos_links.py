@@ -6,7 +6,7 @@ import sys
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from utilis import load_existing_data, save_data, fetch, _print_summary
+from utilis import load_existing_data, save_data, fetch, _print_summary, _scrape_sequential
 
 # Configuração
 BASE_URL = "https://www.ipl.pt/estudar/cursos/"
@@ -55,59 +55,26 @@ def parse_page(html):
         escola_map_select = escola_map.get(escola_raw)
         escola = escola_map_select if escola_map_select else "Desconhecido"
 
+        mapeamento_graus = {
+            "licenciaturas": "Licenciatura",
+            "mestrados": "Mestrado",
+            "pos-graduacoes": "Pos-Graduação"
+        }
+
+        grau = "Desconhecido"
+        for chave, valor in mapeamento_graus.items():
+            if chave in link:
+                grau = valor
+                break 
+
         cursos[link] = {
             "curso": titulo,
             "escola": escola,
             "dateChecked": datetime.now().isoformat(),
-            "tipoCurso": "Licenciatura" if "licenciaturas" in link else "Mestrado" if "mestrados" in link else "Pos-Graduação" if "pos-graduacoes" in link else "Desconhecido"
+            "tipoCurso": grau
         }
 
     return cursos
-
-def _scrape_sequential(start_page, existing_data, curso, all_shared, prefix="[Sequential]"):
-    """Core sequential scraping logic"""
-    page = start_page
-    first_item_key = None
-
-    while True:
-        url = f"{BASE_URL}{curso}?page={page}"
-        print(f"  {prefix} Scraping page {page}...")
-
-        html = fetch(url)
-        if not html:
-            print(f"  {prefix} No response from page {page}")
-            break
-
-        cursos = parse_page(html)
-
-        if not cursos:
-            print(f"  {prefix} No items found on page {page} → End of pagination")
-            break
-
-        if not first_item_key:
-            first_item_key = list(cursos.keys())[0]
-            if first_item_key in existing_data:
-                print(f"  {prefix} First item already scraped → Stopping (no new updates)")
-                break
-
-        new_items = 0
-        for key, value in cursos.items():
-            if key not in all_shared:
-                all_shared[key] = value
-                new_items += 1
-
-        print(f"  {prefix} Page {page}: {len(cursos)} items ({new_items} new)")
-
-        if len(cursos) < MIN_ITEMS_PER_PAGE:
-            print(f"  {prefix} Page {page} has fewer than {MIN_ITEMS_PER_PAGE} items → Stopping")
-            break
-
-        if new_items == 0:
-            print(f"  {prefix} No new items found → All updates already scraped, stopping")
-            break
-
-        page += 1
-        sleep(1)
 
 def scrape_cursos(force_full=False):
     """Scrape all cursos pages"""
@@ -122,7 +89,7 @@ def scrape_cursos(force_full=False):
     all_cursos = {} if force_full else dict(existing_data)
 
     for curso in ["licenciaturas", "mestrados", "pos-graduacoes"]:
-        _scrape_sequential(0, existing_data, curso, all_cursos, prefix=f"[{curso.capitalize()}]")
+        _scrape_sequential(BASE_URL, parse_page, 0, existing_data, all_cursos, MIN_ITEMS_PER_PAGE, curso, prefix=f"[{curso.capitalize()}]")
 
     sort_key = "dateChecked"
     save_data(all_cursos, sort_key, OUTPUT_FILE)

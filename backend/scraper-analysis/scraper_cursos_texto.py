@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 from urllib.parse import urlparse
 import re
-from utilis import load_existing_data, load_links, save_data, fetch_async, normalize_text, _print_summary
+from utilis import load_existing_data, load_links, save_data, fetch_async, normalize_text, _print_summary, _scrape_chunk, scrape_parallel
 
 # Configuração
 BASE_PATH = Path("documents/cursos/")
@@ -40,8 +40,8 @@ def parse_content(html, curso, tipoCurso, escola, link):
         "dateChecked": datetime.now().isoformat()
     }
 
-async def scrape_newsletter(session, link_info, existing_data, semaphore):
-    """Scrape a single newsletter"""
+async def scrape_cursos(session, link_info, existing_data, semaphore):
+    """Scrape a single curso"""
     url = link_info["link"]
     curso = link_info.get("curso", "")
     tipoCurso = link_info.get("tipoCurso", "")
@@ -57,58 +57,6 @@ async def scrape_newsletter(session, link_info, existing_data, semaphore):
             return curso, content
 
     return None
-
-async def _scrape_chunk(session, chunk, existing_data, all_data_shared, semaphore, prefix=""):
-    """Scrape a chunk of newsletters"""
-    for link_info in chunk:
-        try:
-            result = await scrape_newsletter(session, link_info, existing_data, semaphore)
-            if result:
-                curso, content = result
-                all_data_shared[curso] = content
-                print(f"  {prefix} Added: {curso}")
-        except Exception as e:
-            print(f"  {prefix} Error scraping {link_info['link']}: {e}")
-
-
-async def scrape_newsletters_parallel(links, semaphore, num_scrapers=NUM_SCRAPERS, force_full=False):
-    """Scrape newsletters with parallel scrapers"""
-    if force_full and Path(OUTPUT_FILE).exists():
-        Path(OUTPUT_FILE).unlink()
-        print(f"Removed existing {OUTPUT_FILE} before full scrape")
-
-    previous_data = load_existing_data(OUTPUT_FILE)
-    existing_data = {} if force_full else previous_data
-    sort_key = "dataPublicacao"
-    print(f"Loaded {len(previous_data)} existing items")
-
-    all_data = {} if force_full else dict(previous_data)
-
-    if not links:
-        print("No links to scrape.")
-        save_data(all_data, sort_key, OUTPUT_FILE)   # garante que o ficheiro fica gravado mesmo sem novos links (ex.: vazio, se force_full)
-        return
-
-    # Split links into chunks for parallel scrapers
-    chunk_size = (len(links) + num_scrapers - 1) // num_scrapers
-    chunks = [links[i:i + chunk_size] for i in range(0, len(links), chunk_size)]
-
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for i, chunk in enumerate(chunks):
-            prefix = f"[Scraper {i+1}/{num_scrapers}]"
-            task = _scrape_chunk(session, chunk, existing_data, all_data, semaphore, prefix)
-            tasks.append(task)
-
-        print(f"Starting {len(chunks)} parallel scrapers...\n")
-        await asyncio.gather(*tasks)
-
-    # Save all data
-    save_data(all_data, sort_key, OUTPUT_FILE)
-
-    # Summary
-    new_count = len(all_data) - len(previous_data)
-    _print_summary(previous_data, all_data)
 
 async def main():
     print(f"\n{'='*50}")
@@ -130,8 +78,9 @@ async def main():
 
     print(f"Found {len(links)} cursos to process\n")
 
+    sort_key = "dateChecked"
     # Scrape in parallel
-    await scrape_newsletters_parallel(links, semaphore, force_full=force_full)
+    await scrape_parallel(OUTPUT_FILE, links, semaphore, sort_key, scrape_cursos, NUM_SCRAPERS, force_full=force_full)
 
 if __name__ == "__main__":
     # Ensure documents directory exists

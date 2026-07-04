@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 from urllib.parse import urlparse
 import re
-from utilis import load_existing_data, load_links, save_data, fetch_async, normalize_text, _print_summary
+from utilis import load_existing_data, load_links, save_data, fetch_async, normalize_text, _print_summary, _scrape_chunk, scrape_parallel
 
 # Configuração
 BASE_PATH = Path("documents/newsletter/")
@@ -105,19 +105,6 @@ async def scrape_newsletter(session, link_info, existing_data, semaphore):
 
     return None
 
-async def _scrape_chunk(session, chunk, existing_data, all_data_shared, semaphore, prefix=""):
-    """Scrape a chunk of newsletters"""
-    for link_info in chunk:
-        try:
-            result = await scrape_newsletter(session, link_info, existing_data, semaphore)
-            if result:
-                titulo, content = result
-                all_data_shared[titulo] = content
-                print(f"  {prefix} Added: {titulo}")
-        except Exception as e:
-            print(f"  {prefix} Error scraping {link_info['link']}: {e}")
-
-
 async def scrape_newsletters_parallel(links, semaphore, num_scrapers=NUM_SCRAPERS, force_full=False):
     """Scrape newsletters with parallel scrapers"""
     if force_full and Path(OUTPUT_FILE).exists():
@@ -144,7 +131,7 @@ async def scrape_newsletters_parallel(links, semaphore, num_scrapers=NUM_SCRAPER
         tasks = []
         for i, chunk in enumerate(chunks):
             prefix = f"[Scraper {i+1}/{num_scrapers}]"
-            task = _scrape_chunk(session, chunk, existing_data, all_data, semaphore, prefix)
+            task = _scrape_chunk(session, chunk, existing_data, all_data, semaphore, scrape_newsletter, prefix)
             tasks.append(task)
 
         print(f"Starting {len(chunks)} parallel scrapers...\n")
@@ -156,6 +143,7 @@ async def scrape_newsletters_parallel(links, semaphore, num_scrapers=NUM_SCRAPER
     # Summary
     new_count = len(all_data) - len(previous_data)
     _print_summary(previous_data, all_data)
+
 
 async def main():
     print(f"\n{'='*50}")
@@ -176,8 +164,9 @@ async def main():
 
     print(f"Found {len(links)} newsletters to process\n")
 
+    sort_key = "dataPublicacao"
     # Scrape in parallel
-    await scrape_newsletters_parallel(links, semaphore, force_full=force_full)
+    await scrape_parallel(OUTPUT_FILE, links, semaphore, sort_key, scrape_newsletter, NUM_SCRAPERS, force_full=force_full)
 
 if __name__ == "__main__":
     # Ensure documents directory exists

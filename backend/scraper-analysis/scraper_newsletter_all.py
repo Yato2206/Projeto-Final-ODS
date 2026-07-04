@@ -6,7 +6,7 @@ import sys
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from time import sleep
-from utilis import load_existing_data, save_data, fetch, _print_summary
+from utilis import load_existing_data, save_data, fetch, _print_summary, _scrape_sequential
 
 # Configuração
 BASE_URL = "https://www.ipl.pt/en/politecnico/comunicacao/newsletter"
@@ -46,51 +46,6 @@ def parse_page(html):
 
     return news
 
-def _scrape_sequential(start_page, existing_data, all_news_shared, prefix="[Sequential]"):
-    """Core sequential scraping logic"""
-    page = start_page
-    first_item_key = None
-
-    while True:
-        url = f"{BASE_URL}?page={page}"
-        print(f"  {prefix} Scraping page {page}...")
-
-        html = fetch(url)
-        if not html:
-            print(f"  {prefix} No response from page {page}")
-            break
-
-        news = parse_page(html)
-
-        if not news:
-            print(f"  {prefix} No items found on page {page} → End of pagination")
-            break
-
-        if not first_item_key:
-            first_item_key = list(news.keys())[0]
-            if first_item_key in existing_data:
-                print(f"  {prefix} First item already scraped → Stopping (no new updates)")
-                break
-
-        new_items = 0
-        for key, value in news.items():
-            if key not in all_news_shared:
-                all_news_shared[key] = value
-                new_items += 1
-
-        print(f"  {prefix} Page {page}: {len(news)} items ({new_items} new)")
-
-        if len(news) < MIN_ITEMS_PER_PAGE:
-            print(f"  {prefix} Page {page} has fewer than {MIN_ITEMS_PER_PAGE} items → Stopping")
-            break
-
-        if new_items == 0:
-            print(f"  {prefix} No new items found → All updates already scraped, stopping")
-            break
-
-        page += 1
-        sleep(1)
-
 def scrape_newsletters(force_full=False):
     """Scrape all newsletter pages"""
     if force_full and Path(OUTPUT_FILE).exists():
@@ -103,7 +58,7 @@ def scrape_newsletters(force_full=False):
 
     all_news = {} if force_full else dict(existing_data)
 
-    _scrape_sequential(0, existing_data, all_news)
+    _scrape_sequential(BASE_URL, parse_page, 0, existing_data, all_news, MIN_ITEMS_PER_PAGE)
 
     sort_key = "dataPublicacao"
     save_data(all_news, sort_key, OUTPUT_FILE)

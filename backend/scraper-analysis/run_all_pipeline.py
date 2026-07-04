@@ -44,6 +44,8 @@ def main():
     print(f"Start time: {datetime.now().isoformat()}")
     
     steps = [
+        ("py scraper_cursos_links.py", "Cursos Links Scraper"),
+        ("py scraper_cursos_texto.py", "Cursos Content Scraper"),
         ("py scraper_newsletter_all.py", "Newsletter Links Scraper"),
         ("py scraper_newsletter_each.py", "Newsletter Content Scraper"),
         ("py scraper_repo_cientifico.py", "Scientific Repository Scraper"),
