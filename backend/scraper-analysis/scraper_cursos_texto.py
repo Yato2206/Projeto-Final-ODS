@@ -19,7 +19,7 @@ NUM_SCRAPERS = 5
 
 #semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 
-def parse_content(html, titulo, tipoCurso, escola, link):
+def parse_content(html, curso, tipoCurso, escola, link):
     """Parse newsletter HTML and extract content"""
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -32,7 +32,7 @@ def parse_content(html, titulo, tipoCurso, escola, link):
         return None
 
     return {
-        "curso": titulo,
+        "curso": curso,
         "link": link,
         "escola": escola,
         "texto": texto.get_text(separator="\n", strip=True),
@@ -43,14 +43,14 @@ def parse_content(html, titulo, tipoCurso, escola, link):
 async def scrape_newsletter(session, link_info, existing_data, semaphore):
     """Scrape a single newsletter"""
     url = link_info["link"]
-    titulo = link_info.get("titulo", "")
+    curso = link_info.get("curso", "")
     tipoCurso = link_info.get("tipoCurso", "")
     escola = link_info.get("escola", "")
     html = await fetch_async(session, semaphore, url)
     if not html:
         return None
 
-    content = parse_content(html, titulo, tipoCurso, escola, url)
+    content = parse_content(html, curso, tipoCurso, escola, url)
     if content:
         curso = content["link"]
         if curso not in existing_data:
@@ -64,9 +64,9 @@ async def _scrape_chunk(session, chunk, existing_data, all_data_shared, semaphor
         try:
             result = await scrape_newsletter(session, link_info, existing_data, semaphore)
             if result:
-                titulo, content = result
-                all_data_shared[titulo] = content
-                print(f"  {prefix} Added: {titulo}")
+                curso, content = result
+                all_data_shared[curso] = content
+                print(f"  {prefix} Added: {curso}")
         except Exception as e:
             print(f"  {prefix} Error scraping {link_info['link']}: {e}")
 
