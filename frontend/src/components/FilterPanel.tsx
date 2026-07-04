@@ -1,4 +1,10 @@
 import React, { useState } from "react"
+import {
+    availableTypes,
+    availableOrigens,
+    availableTaxonomias,
+    getYearRange
+} from "./Utilis"
 import '../styles/FilterPanel.css';
 
 interface FilterPanelProps {
@@ -15,12 +21,8 @@ interface FilterPanelProps {
     ods: string[];
     origens: string[];
     taxonomias: string[];
-    availableTypes: string[];
     availableOds: string[];
-    availableOrigens: string[];
-    availableTaxonomias: string[];
     buttonLabel?: string;
-    yearRange?: { minYear: number; maxYear: number };
 }
 
 const FilterPanel: React.FC<FilterPanelProps> = ({
@@ -37,17 +39,14 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     ods,
     origens,
     taxonomias,
-    availableTypes,
     availableOds,
-    availableOrigens,
-    availableTaxonomias,
-    buttonLabel = "Aplicar Filtros",
-    yearRange
+    buttonLabel,
 }) => {
     const [isTypesExpanded, setIsTypesExpanded] = useState(true);
     const [isOdsExpanded, setIsOdsExpanded] = useState(true);
     const [isOrigensExpanded, setIsOrigensExpanded] = useState(true);
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
+    const yearRange = getYearRange()
 
     const getMaxMonthString = (): string => {
         const maxYear = yearRange?.maxYear || new Date().getFullYear();
@@ -258,12 +257,14 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                                 <label>ODS:</label>
                                 <div className="ods-button-group">
                                     {isOdsExpanded && (
-                                        <button
-                                            className="select-all-button"
-                                            onClick={handleSelectAllOds}
-                                        >
-                                            {ods.length === availableOds.length ? "Limpar" : "Selecionar tudo"}
-                                        </button>
+                                        !(taxonomias.length === 0) && (
+                                            <button
+                                                className="select-all-button"
+                                                onClick={handleSelectAllOds}
+                                            >
+                                                {ods.length === availableOds.length ? "Limpar" : "Selecionar tudo"}
+                                            </button>
+                                        )
                                     )}
                                     <label className="container">
                                         <input

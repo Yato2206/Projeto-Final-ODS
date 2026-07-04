@@ -1,254 +1,40 @@
 import React from "react"
-import {useEffect, useReducer, useState} from "react";
-import OutputList from "./OutputList";
+import { useEffect , useState } from "react";
+import ResultList from "./ResultList";
 import FilterPanel from "./FilterPanel";
-import { getNumberDocs } from "./Utilis";
-import {Result} from "../interfaces";
-import { Tipo , Ods , Origens , Taxonomias } from "../types";
+import { PendingFilters} from "../types";
+
+import {
+    taxonomia_names,
+    getOdsForTaxonomia,
+    fetchDocumentsData,
+    filterDocuments
+} from "./Utilis";
+
+import { Result } from "../interfaces";
+import { Taxonomias } from "../types";
 import '../styles/SearchBar.css';
+import {usePendingFilters} from "../hooks/usePendingFilters";
 
 const ITEMS_PER_PAGE = 10;
-const availableTypes: Tipo[] = ["Ação na sociedade", "Artístico", "Artigo científico", "Ensino", "Newsletter", "Outro"];
-const availableOds: Ods[] = [
-    "ODS 1 - Erradicar a Pobreza",
-    "ODS 2 - Erradicar a Fome",
-    "ODS 3 - Saúde de Qualidade",
-    "ODS 4 - Educação de Qualidade",
-    "ODS 5 - Igualdade de Género",
-    "ODS 6 - Água Potável e Saneamento",
-    "ODS 7 - Energias Renováveis e Acessíveis",
-    "ODS 8 - Trabalho Digno e Crescimento Económico",
-    "ODS 9 - Indústria, Inovação e Infraestruturas",
-    "ODS 10 - Reduzir as Desigualdades",
-    "ODS 11 - Cidades e Comunidades Sustentáveis",
-    "ODS 12 - Produção e Consumo Sustentáveis",
-    "ODS 13 - Ação Climática",
-    "ODS 14 - Proteger a Vida Marinha",
-    "ODS 15 - Proteger a Vida Terrestre",
-    "ODS 16 - Paz, Justiça e Instituições Eficazes",
-    "ODS 17 - Parcerias para a Implementação dos Objetivos"
-]
-const availableOrigens: Origens[] = ["Repositório Científico", "Newsletter", "Scopus"];
-const availableTaxonomias: Taxonomias[] = ["Universidade de Auckland" , "Universidade de Educação de Hong Kong"];
-
-const taxonomia_names: Record<Taxonomias, string> = {
-    "Universidade de Auckland": "UoA",
-    "Universidade de Educação de Hong Kong": "HK"
-};
-
-type State = {
-    minDate: string;
-    maxDate: string;
-    types: string[];
-    ods: string[];
-    origens: string[];
-    taxonomias: string[];
-};
-
-type PendingFilters = {
-    minDate: string;
-    maxDate: string;
-    types: string[];
-    ods: string[];
-    origens: string[];
-    taxonomias: string[];
-};
-
-type Action =
-    | { type: "apply-filters"; minDate: string; maxDate: string; types: string[]; ods: string[]; origens: string[]; taxonomias: string[] };
-
-function reducer(state: State, action: Action): State {
-    switch (action.type) {
-        case "apply-filters":
-            return {
-                minDate: action.minDate,
-                maxDate: action.maxDate,
-                types: action.types,
-                ods: action.ods,
-                origens: action.origens,
-                taxonomias: action.taxonomias,
-            };
-        default:
-            return state;
-    }
-}
-
-const initialState: State = {
-    minDate: "",
-    maxDate: "",
-    types: [],
-    ods: [],
-    origens: [],
-    taxonomias: [],
-};
 
 export function SearchBar() {
-    const [state, dispatch] = useReducer(reducer, initialState);
-    const [pendingFilters, setPendingFilters] = useState<PendingFilters>({
-        minDate: "",
-        maxDate: "",
-        types: [],
-        ods: [],
-        origens: [],
-        taxonomias: [],
-    });
     const [data, setData] = useState<Result[]>([]);
     const [filteredData, setFilteredData] = useState<Result[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [inputPage, setInputPage] = useState("");
-
-    // Calculate the year range (current year - 5 years to current year)
-    const getYearRange = (): { minYear: number; maxYear: number } => {
-        const currentYear = new Date().getFullYear();
-        const minYear = currentYear - 5;
-        return { minYear, maxYear: currentYear };
-    };
-
-    // Map document tipo to predefined type, defaulting to "Outro"
-    const mapTipoToType = (tipo: string): Tipo => {
-        if (availableTypes.includes(tipo as Tipo)) {
-            return tipo as Tipo;
-        }
-        return "Outro";
-    };
-
-    // Fetch all formatted documents
-    const fetchDocumentsData = async () => {
-        try {
-            const formattedDocs: Result[] = [];
-            const odsSet = new Set<string>();
-
-            // Load all resultados_ods_parte_*.json files
-            for (let i = 1; i <= await getNumberDocs(); i++) {
-                try {
-                    const response = await fetch(`/resultados_ods_${i}.json`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        
-                        Object.entries(data).forEach(([key, value]: [string, any]) => {
-                            const odsMapeados: Record<string, string[]> = {};
-                            const taxonomiasDoc: string[] = [];
-
-                            if (value.ods_mapeados) {
-                                Object.entries(value.ods_mapeados).forEach(([taxCode, odsObj]) => {
-                                    const odsList = odsObj ? Object.keys(odsObj as object) : [];
-                                    odsMapeados[taxCode] = odsList;
-
-                                    if (odsList.length > 0) {
-                                        taxonomiasDoc.push(taxCode);
-                                    }
-                                });
-                            }
-
-                            const doc: Result = {
-                                id: key,
-                                name: value.titulo,
-                                date: value.dataPublicacao,
-                                type: mapTipoToType(value.tipo),
-                                autores: value.autores,
-                                origin: value.origem,
-                                dateChecked: value.dateChecked,
-                                odsMapeados: odsMapeados,
-                                taxonomias: taxonomiasDoc,
-                            };
-                            formattedDocs.push(doc);
-                        });
-                    }
-                } catch (error) {
-                    console.error(`Error loading resultados_ods_${i}.json:`, error);
-                }
-            }
-
-            console.log("Loaded documents:", formattedDocs.length);
-            // Sort by date descending
-            formattedDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setData(formattedDocs);
-            // Set available ODS sorted
-            setCurrentPage(1);
-        } catch (error) {
-            console.error("Error fetching documents data:", error);
-        }
-    }
-
-    const getMonthDateRange = (monthStr: string): { startDate: Date; endDate: Date } | null => {
-        if (!monthStr) return null;
-        const [year, month] = monthStr.split('-');
-        const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-        const endDate = new Date(parseInt(year), parseInt(month), 0);
-        return { startDate, endDate };
-    };
-
-    const getOdsForTaxonomia = (taxonomiaName: string): string[] => {
-        if (!taxonomiaName) return [];
-        const code = taxonomia_names[taxonomiaName as Taxonomias];
-        const odsSet = new Set<string>();
-
-        data.forEach(item => {
-            if (item.odsMapeados && item.odsMapeados[code]) {
-                item.odsMapeados[code].forEach(o => odsSet.add(o));
-            }
-        });
-
-        return availableOds.filter(ods => odsSet.has(ods));
-    };
+    const {
+        pendingFilters,
+        handleMinDateChange,
+        handleMaxDateChange,
+        handleTypesChange,
+        handleOdsChange,
+        handleOrigensChange,
+        handleTaxonomiasChange,
+    } = usePendingFilters();
 
     const applyFilters = () => {
-        let filtered = [...data];
-
-        // Date range filter
-        if (state.minDate || state.maxDate) {
-            filtered = filtered.filter(item => {
-                const itemDate = new Date(item.date);
-
-                if (state.minDate) {
-                    const minRange = getMonthDateRange(state.minDate);
-                    if (minRange && itemDate < minRange.startDate) {
-                        return false;
-                    }
-                }
-
-                if (state.maxDate) {
-                    const maxRange = getMonthDateRange(state.maxDate);
-                    if (maxRange && itemDate > maxRange.endDate) {
-                        return false;
-                    }
-                }
-
-                return true;
-            });
-        }
-
-        // Type filter
-        if (state.types && state.types.length > 0) {
-            filtered = filtered.filter(item =>
-                item.type && state.types.includes(item.type)
-            );
-        }
-
-        let selectedTax: string | null = null;
-        if (state.taxonomias && state.taxonomias.length > 0) {
-            selectedTax = taxonomia_names[state.taxonomias[0] as Taxonomias];
-            filtered = filtered.filter(item =>
-                item.taxonomias && item.taxonomias.includes(selectedTax!)
-            );
-        }
-
-        // ODS filter - check if any selected ODS is present in item.ods
-        if (selectedTax && state.ods && state.ods.length > 0) {
-            filtered = filtered.filter(item =>
-                item.odsMapeados &&
-                item.odsMapeados[selectedTax!] &&
-                item.odsMapeados[selectedTax!].some((odsItem: string) => state.ods.includes(odsItem))
-            );
-        }
-
-        // Origin filter
-        if (state.origens && state.origens.length > 0) {
-            filtered = filtered.filter(item =>
-                item.origin && state.origens.includes(item.origin)
-            );
-        }
-
+        const { filtered , selectedTax } = filterDocuments(data, pendingFilters);
         setFilteredData(filtered);
         setCurrentPage(1);
     };
@@ -305,9 +91,9 @@ export function SearchBar() {
         }
     };
 
-
     useEffect(() => {
-        fetchDocumentsData();
+        fetchDocumentsData().then(setData);
+        setCurrentPage(1);
     }, []);
 
     // When data loads initially, show all data
@@ -316,66 +102,6 @@ export function SearchBar() {
             setFilteredData(data);
         }
     }, [data]);
-
-    // When state filters change (after Apply button is clicked), apply filters
-    useEffect(() => {
-        applyFilters();
-    }, [state]);
-
-    const handleMinDateChange = (minDate: string) => {
-        setPendingFilters({
-            ...pendingFilters,
-            minDate
-        });
-    };
-
-    const handleMaxDateChange = (maxDate: string) => {
-        setPendingFilters({
-            ...pendingFilters,
-            maxDate
-        });
-    };
-
-    const handleTypesChange = (types: string[]) => {
-        setPendingFilters({
-            ...pendingFilters,
-            types
-        });
-    };
-
-    const handleOdsChange = (ods: string[]) => {
-        setPendingFilters({
-            ...pendingFilters,
-            ods
-        });
-    };
-
-    const handleOrigensChange = (origens: string[]) => {
-        setPendingFilters({
-            ...pendingFilters,
-            origens
-        });
-    };
-
-    const handleTaxonomiasChange = (taxonomias: string[]) => {
-        setPendingFilters({
-            ...pendingFilters,
-            taxonomias,
-            ods: [], // reset porque as opções de ODS dependem da taxonomia
-        });
-    };
-
-    const handleApplyFilters = () => {
-        dispatch({
-            type: "apply-filters",
-            minDate: pendingFilters.minDate,
-            maxDate: pendingFilters.maxDate,
-            types: pendingFilters.types,
-            ods: pendingFilters.ods,
-            origens: pendingFilters.origens,
-            taxonomias: pendingFilters.taxonomias,
-        });
-    };
 
     return (
         <div className="search-bar-container">
@@ -388,28 +114,24 @@ export function SearchBar() {
                 onOdsChange={handleOdsChange}
                 onOrigensChange={handleOrigensChange}
                 onTaxonomiasChange={handleTaxonomiasChange}
-                onApplyFilters={handleApplyFilters}
+                onApplyFilters={applyFilters}
                 minDate={pendingFilters.minDate}
                 maxDate={pendingFilters.maxDate}
                 types={pendingFilters.types}
                 ods={pendingFilters.ods}
                 origens={pendingFilters.origens}
                 taxonomias={pendingFilters.taxonomias}
-                availableTypes={availableTypes}
                 availableOds={
                     pendingFilters.taxonomias.length === 1
-                        ? getOdsForTaxonomia(pendingFilters.taxonomias[0])
+                        ? getOdsForTaxonomia(data, pendingFilters.taxonomias[0])
                         : []
                 }
-                availableOrigens={availableOrigens}
-                availableTaxonomias={availableTaxonomias}
                 buttonLabel="Aplicar Filtros"
-                yearRange={getYearRange()}
             />
 
             <div className="results-container">
                 <h2>Resultados ({filteredData.length})</h2>
-                <OutputList data={getPageData()} />
+                <ResultList data={getPageData()} selectedTax={pendingFilters.taxonomias.length > 0 ? taxonomia_names[pendingFilters.taxonomias[0] as Taxonomias] : null} />
                 
                 {getTotalPages() > 1 && (
                     <div className="pagination-controls">

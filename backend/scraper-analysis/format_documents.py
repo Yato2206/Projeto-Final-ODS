@@ -130,7 +130,7 @@ def format_newsletter_documents():
                     "autores": "Autor Desconhecido",
                     "texto": noticia_texto,
                     "dataPublicacao": date_publicacao,
-                    "tipo": "Newsletter",
+                    "tipo": "Noticia da Newsletter",
                     "dateChecked": date_checked,
                     "origem": "Newsletter"
                 }
@@ -144,6 +144,17 @@ def format_scientific_repo_documents():
     print("\n" + "="*60)
     print("FORMATTING SCIENTIFIC REPOSITORY DOCUMENTS")
     print("="*60)
+
+    typesAC = {
+        "Academic article", "Article", "Artigo acadêmico", "Artigo academico", "Artigo científico", "Artigo cientifico", "Artigo de investigação",
+        "Artigo de investigacao", "Artigo de pesquisa", "Research paper", "Scientific article", "Scientific publication", "Artigo cientifico"
+    }
+
+    typesE = {
+        "Book", "bookPart", "Book chapter", "Capítulo de livro", "Capitulo de livro", "Chapter book", "Course", "Curso", "Curso de formação",
+        "Educação", "Educacao", "Education", "Educational resource", "Ensino", "Formacao", "Formação", "Formation Course", "Formation", "Livro",
+        "Recurso educativo"
+    }
 
     formatted_docs = {}
     repo_files = sorted(glob.glob(str(DOCUMENTS_DIR / "repo_cientifico" / "repo_cientifico_*.json")))
@@ -161,7 +172,16 @@ def format_scientific_repo_documents():
                 autores = doc.get("autores", "")
                 texto = doc.get("texto", "")
                 data_publicacao = doc.get("dataPublicacao", "")
+
                 tipo = doc.get("tipo", "")
+
+                if tipo in typesAC:
+                    formattedTipo = "Artigo Científico"
+                elif tipo in typesE:
+                    formattedTipo = "Educação"
+                else:
+                    formattedTipo = tipo
+
                 date_checked = doc.get("dateChecked", datetime.now().isoformat())
 
                 if texto:
@@ -170,7 +190,7 @@ def format_scientific_repo_documents():
                         "autores": autores,
                         "texto": texto,
                         "dataPublicacao": data_publicacao,
-                        "tipo": tipo,
+                        "tipo": formattedTipo,
                         "dateChecked": date_checked,
                         "origem": "Repositório Científico"
                     }
@@ -185,13 +205,56 @@ def format_scientific_repo_documents():
     print(f"Formatted {total_items} scientific repository items")
     return formatted_docs
 
-def merge_and_save(newsletter_docs, repo_docs, api_docs, chunk_size=1000):
+def format_cursos():
+
+    print("\n" + "="*60)
+    print("FORMATTING CURSOS")
+    print("="*60)
+
+    cursos_file = DOCUMENTS_DIR / "cursos" / "cursos_content.json"
+    formatted_cursos = {}
+
+    if not cursos_file.exists():
+        print(f"Newsletter file not found: {cursos_file}")
+        return formatted_cursos
+
+    with open(cursos_file, "r", encoding="utf-8") as f:
+        cursos = json.load(f)
+
+    total_items = 0
+
+    for curso_name, curso in cursos.items():
+
+        date_checked = curso.get("dateChecked", datetime.now().isoformat())
+
+        curso_nome = curso.get("curso", curso_name)
+        curso_texto = curso.get("texto", "")
+        escola = curso.get("escola", "")
+        link = curso.get("link", "")
+        tipo = curso.get("tipoCurso", "")
+
+        if link and curso_texto:
+            formatted_cursos[link] = {
+                "curso": curso_nome,
+                "autores": escola,
+                "texto": curso_texto,
+                "tipo": tipo,
+                "dateChecked": date_checked,
+                "origem": escola
+            }
+            total_items += 1
+
+    print(f"Formatted {total_items} cursos")
+    return formatted_cursos
+
+
+def merge_and_save(newsletter_docs, repo_docs, api_docs, cursos, chunk_size=1000):
 
     print("\n" + "="*60)
     print("MERGING AND SAVING")
     print("="*60)
 
-    all_docs = {**newsletter_docs, **repo_docs, **api_docs}
+    all_docs = {**newsletter_docs, **repo_docs, **api_docs, **cursos}
 
     items = list(all_docs.items())
     total_files = 0
@@ -238,7 +301,8 @@ def main():
     newsletter_docs = format_newsletter_documents()
     repo_docs = format_scientific_repo_documents()
     api_docs = load_formatted_documents_from_directory(SCRIPT_DIR / "apis" / "documents", "Scopus API")
-    all_docs = merge_and_save(newsletter_docs, repo_docs, api_docs)
+    cursos = format_cursos()
+    all_docs = merge_and_save(newsletter_docs, repo_docs, api_docs, cursos)
 
     print("\n" + "="*60)
     print(f"FORMATTING COMPLETE!")
@@ -246,6 +310,7 @@ def main():
     print(f"  - Newsletter items: {len(newsletter_docs)}")
     print(f"  - Scientific Repository items: {len(repo_docs)}")
     print(f"  - Scopus API items: {len(api_docs)}")
+    print(f"  - Cursos items: {len(cursos)}")
     print(f"{'='*60}\n")
 
 

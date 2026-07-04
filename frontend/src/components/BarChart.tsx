@@ -39,6 +39,7 @@ const BarChartComponent: React.FC<BarChartComponentProps> = ({ data }) => {
                     <Bar
                         dataKey="count"
                         label={{ position: 'top' }}
+                        isAnimationActive={false}
                     >
                         {data.map((entry, index) => (
                             <Cell

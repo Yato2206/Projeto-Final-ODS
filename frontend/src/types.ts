@@ -1,4 +1,13 @@
-export type Tipo = "Ação na sociedade" | "Artístico" | "Artigo científico" | "Ensino" | "Newsletter" | "Outro"
+export type Tipo =
+    "Ação na sociedade" |
+    "Artístico" |
+    "Artigo Científico" |
+    "Ensino" | "Newsletter" |
+    "Noticia da Newsletter" |
+    "Licenciatura" |
+    "Mestrado" |
+    "Pos-Graduação" |
+    "Outro"
 
 export type Ods =
     "ODS 1 - Erradicar a Pobreza" |
@@ -22,3 +31,12 @@ export type Ods =
 export type Origens = "Repositório Científico" | "Newsletter" | "Scopus"
 
 export type Taxonomias = "Universidade de Auckland" | "Universidade de Educação de Hong Kong"
+
+export type PendingFilters = {
+    minDate: string;
+    maxDate: string;
+    types: string[];
+    ods: string[];
+    origens: string[];
+    taxonomias: string[];
+};

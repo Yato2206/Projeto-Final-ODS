@@ -1,20 +1,29 @@
 import React from "react"
 import { Result } from '../interfaces';
+import { formatDateChecked } from "./Utilis";
 import '../styles/ResultCard.css';
 
 interface ResultCardProps {
     result: Result;
+    selectedTax: string | null;
 }
 
-const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
+const ResultCard: React.FC<ResultCardProps> = ({ result, selectedTax }) => {
     const formatDate = (dateString: string): string => {
         const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            return "";
+        }
         return date.toLocaleDateString('pt-PT', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
         });
     };
+
+    const odsList = selectedTax && result.odsMapeados
+        ? result.odsMapeados[selectedTax] ?? []
+        : [];
 
     return (
         <div className="result-card">
@@ -41,13 +50,13 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
                 )}
                 {result.dateChecked && (
                     <p className="result-card-dateChecked">
-                        <strong>Date Checked:</strong> {result.dateChecked}
+                        <strong>Date Checked:</strong> {formatDateChecked(result.dateChecked)}
                     </p>
                 )}
             </div>
 
             <div className="result-card-ods">
-                <strong>ODS:</strong> {result.ods && result.ods.length > 0 ? result.ods.join(', ') : 'NULL'}
+                <strong>ODS:</strong> {odsList.length > 0 ? odsList.join(', ') : 'Nenhuma ODS identificada.'}
             </div>
             
             <div className="result-card-footer">

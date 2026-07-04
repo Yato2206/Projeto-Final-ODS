@@ -101,6 +101,7 @@ const PieChartComponent = ({ data }) => {
                     labelLine={false}
                     innerRadius={125}
                     outerRadius={200}
+                    isAnimationActive={false}
                 >
                     {data.map((entry, index) => (
                         <Cell
@@ -111,7 +112,7 @@ const PieChartComponent = ({ data }) => {
 
                 <image
                     href={odsLogo}
-                    x={180}
+                    x={200}
                     y={200}
                     width={200}
                     height={200}
