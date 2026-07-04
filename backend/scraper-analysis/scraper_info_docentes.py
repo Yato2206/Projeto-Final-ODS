@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from pathlib import Path
 import sys
-from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen

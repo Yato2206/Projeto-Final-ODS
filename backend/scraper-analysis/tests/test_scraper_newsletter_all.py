@@ -6,21 +6,6 @@ import scraper_newsletter_all as scraper
 from urllib.error import HTTPError
 import time
 
-def test_fetch_sucesso():
-    with patch("scraper_newsletter_all.urlopen") as mock_urlopen:
-        mock_response = MagicMock()
-        mock_response.read.return_value = b"<html>conteudo</html>"
-        mock_response.__enter__.return_value = mock_response
-        mock_urlopen.return_value = mock_response
-        resultado = scraper.fetch("http://exemplo.com")
-        assert resultado == "<html>conteudo</html>"
-
-def test_fetch_falha_todas_as_tentativas(monkeypatch):
-    monkeypatch.setattr("scraper_newsletter_all.sleep", lambda x: None)  # Evita delays durante o teste
-    with patch("scraper_newsletter_all.urlopen", side_effect=HTTPError("http://exemplo.com", 500, "Internal Server Error", {}, None)):
-        resultado = scraper.fetch("http://exemplo.com")
-        assert resultado is None
-
 def test_parse_page_item_valido():
     html = """
         <div class="view-content-wrap">

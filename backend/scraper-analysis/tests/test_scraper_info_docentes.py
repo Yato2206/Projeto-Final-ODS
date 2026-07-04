@@ -230,7 +230,7 @@ def test_parse_info(html, escola, expected):
 @pytest.mark.asyncio
 async def test_scrape_one_ja_scraped(monkeypatch):
     mock_fetch = AsyncMock()
-    monkeypatch.setattr(scraper, "fetch", mock_fetch)
+    monkeypatch.setattr(scraper, "fetch_async", mock_fetch)
 
     entry = {"name": "Docente A", "escola": "ISEL", "link": "http://x.com/1"}
     resultado = await scraper.scrape_one(None, None, entry, {"Docente A"})
@@ -255,7 +255,7 @@ async def test_scrape_one_url_invalida_devolve_base_record(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_one_fetch_falha(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value=None))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value=None))
 
     entry = {"name": "Docente A", "escola": "ISEL", "link": "http://x.com/1"}
     resultado = await scraper.scrape_one(None, None, entry, set())
@@ -265,7 +265,7 @@ async def test_scrape_one_fetch_falha(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_one_sucesso_com_parsed(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_info", lambda html, escola: {
         "ORCID": "http://orcid.org/123456",
         "Ciência Vitae": "http://cienciavitae.pt/789012",
@@ -286,7 +286,7 @@ async def test_scrape_one_sucesso_com_parsed(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_one_sem_parsed_devolve_base_record(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_info", lambda html, escola: {})
 
     entry = {"name": "Docente A", "escola": "ISEL", "link": "http://x.com/1"}
@@ -304,7 +304,7 @@ async def test_scrape_one_sem_parsed_devolve_base_record(monkeypatch):
 @pytest.mark.asyncio
 async def test_scrape_one_base_record_nao_e_sobrescrito_por_parse(monkeypatch):
     """Confirma que campos do base_record (escola, sourceUrl) não são sobrescritos pelo parse."""
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_info", lambda html, escola: {
         "escola": "VALOR_ERRADO",      
         "sourceUrl": "http://errado",

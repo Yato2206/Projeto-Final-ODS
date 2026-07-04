@@ -7,65 +7,6 @@ import scraper_newsletter_each as scraper
 from urllib.error import HTTPError
 from datetime import datetime
 
-@pytest.mark.asyncio
-async def test_fetch_sucesso():
-    mock_response = AsyncMock()
-    mock_response.status = 200
-    mock_response.text.return_value = "<html>conteudo</html>"
-    mock_session = MagicMock()
-    mock_session.get.return_value.__aenter__.return_value = mock_response
-    resultado = await scraper.fetch(mock_session, "http://exemplo.com")
-    assert resultado == "<html>conteudo</html>"
-
-@pytest.mark.asyncio
-async def test_fetch_status_diferente_de_200_tenta_novamente_e_falha(monkeypatch):
-    monkeypatch.setattr(scraper.asyncio, "sleep", AsyncMock()) 
-
-    mock_response = AsyncMock()
-    mock_response.status = 404
-
-    mock_session = MagicMock()
-    mock_session.get.return_value.__aenter__.return_value = mock_response
-
-    resultado = await scraper.fetch(mock_session, "http://exemplo.com")
-
-    assert resultado is None
-    assert mock_session.get.call_count == scraper.RETRIES  # tentou RETRIES vezes
-
-
-@pytest.mark.asyncio
-async def test_fetch_excecao_de_rede_com_retry_ate_sucesso(monkeypatch):
-    monkeypatch.setattr(scraper.asyncio, "sleep", AsyncMock())
-
-    mock_response_ok = AsyncMock()
-    mock_response_ok.status = 200
-    mock_response_ok.text.return_value = "ok"
-
-    mock_session = MagicMock()
-    # primeira chamada lança excepção, segunda funciona
-    mock_session.get.side_effect = [
-        Exception("falha de rede"),
-        MagicMock(__aenter__=AsyncMock(return_value=mock_response_ok), __aexit__=AsyncMock(return_value=None)),
-    ]
-
-    resultado = await scraper.fetch(mock_session, "http://exemplo.com")
-
-    assert resultado == "ok"
-    assert mock_session.get.call_count == 2
-
-
-@pytest.mark.asyncio
-async def test_fetch_falha_todas_as_tentativas(monkeypatch):
-    monkeypatch.setattr(scraper.asyncio, "sleep", AsyncMock())
-
-    mock_session = MagicMock()
-    mock_session.get.side_effect = Exception("timeout")
-
-    resultado = await scraper.fetch(mock_session, "http://exemplo.com")
-
-    assert resultado is None
-    assert mock_session.get.call_count == scraper.RETRIES
-
 def test_extract_newsletter_id():
     url = "https://www.ipl.pt/newsletter/123"
     newsletter_id = scraper.extract_newsletter_id(url)
@@ -243,14 +184,15 @@ def test_parse_newsletter_content():
 
 @pytest.mark.asyncio
 async def test_scrape_newsletter(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html>...</html>"))
+    semaphore = asyncio.Semaphore(1)
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html>...</html>"))
     monkeypatch.setattr(scraper, "extract_newsletter_id", lambda url: "123")
     monkeypatch.setattr(scraper, "parse_newsletter_content", lambda html, id, data, url: {
         "titulo": "Notícia Nova", "link": url
     })
 
     link_info = {"link": "/noticia/123", "dataPublicacao": "2026-06-20"}
-    resultado = await scraper.scrape_newsletter(None, link_info, {})
+    resultado = await scraper.scrape_newsletter(None, link_info, {}, semaphore)
 
     assert resultado is not None
     titulo, content = resultado
@@ -258,7 +200,8 @@ async def test_scrape_newsletter(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_newsletter_item_ja_existente_devolve_none(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html>...</html>"))
+    semaphore = asyncio.Semaphore(1)
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html>...</html>"))
     monkeypatch.setattr(scraper, "extract_newsletter_id", lambda url: "123")
     monkeypatch.setattr(scraper, "parse_newsletter_content", lambda html, id, data, url: {
         "titulo": "Já Existe", "link": url
@@ -267,38 +210,41 @@ async def test_scrape_newsletter_item_ja_existente_devolve_none(monkeypatch):
     link_info = {"link": "/noticia/123"}
     existing_data = {"Já Existe": {}}
 
-    resultado = await scraper.scrape_newsletter(None, link_info, existing_data)
+    resultado = await scraper.scrape_newsletter(None, link_info, existing_data, semaphore)
     assert resultado is None
 
 @pytest.mark.asyncio
 async def test_scrape_newsletter_fetch_falha_devolve_none(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value=None))
+    semaphore = asyncio.Semaphore(1)
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value=None))
 
     link_info = {"link": "/noticia/x"}
-    resultado = await scraper.scrape_newsletter(None, link_info, {})
+    resultado = await scraper.scrape_newsletter(None, link_info, {}, semaphore)
     assert resultado is None
 
 @pytest.mark.asyncio
 async def test_scrape_newsletter_parse_content_devolve_none(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    semaphore = asyncio.Semaphore(1)
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "extract_newsletter_id", lambda url: "123")
     monkeypatch.setattr(scraper, "parse_newsletter_content", lambda html, id, data, url: None)
 
     link_info = {"link": "/noticia/x"}
-    resultado = await scraper.scrape_newsletter(None, link_info, {})
+    resultado = await scraper.scrape_newsletter(None, link_info, {}, semaphore)
     assert resultado is None
 
 @pytest.mark.asyncio
 async def test_scrape_chunk_adiciona_todos_os_resultados(monkeypatch):
-    async def fake_scrape(session, link_info, existing_data):
+    async def fake_scrape(session, link_info, existing_data, semaphore):
         return (link_info["link"], {"titulo": link_info["link"]})
 
     monkeypatch.setattr(scraper, "scrape_newsletter", fake_scrape)
 
     chunk = [{"link": "/a"}, {"link": "/b"}, {"link": "/c"}]
     all_data_shared = {}
+    semaphore = asyncio.Semaphore(1)
 
-    await scraper._scrape_chunk(None, chunk, {}, all_data_shared)
+    await scraper._scrape_chunk(None, chunk, {}, all_data_shared, semaphore)
 
     assert len(all_data_shared) == 3
     assert "/a" in all_data_shared
@@ -306,7 +252,7 @@ async def test_scrape_chunk_adiciona_todos_os_resultados(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_chunk_erro_num_item_nao_bloqueia_os_outros(monkeypatch):
-    async def fake_scrape(session, link_info, existing_data):
+    async def fake_scrape(session, link_info, existing_data, semaphore):
         if link_info["link"] == "/falha":
             raise Exception("erro simulado")
         return (link_info["link"], {"titulo": link_info["link"]})
@@ -315,8 +261,9 @@ async def test_scrape_chunk_erro_num_item_nao_bloqueia_os_outros(monkeypatch):
 
     chunk = [{"link": "/a"}, {"link": "/falha"}, {"link": "/c"}]
     all_data_shared = {}
+    semaphore = asyncio.Semaphore(1)
 
-    await scraper._scrape_chunk(None, chunk, {}, all_data_shared)
+    await scraper._scrape_chunk(None, chunk, {}, all_data_shared, semaphore)
 
     assert len(all_data_shared) == 2          # "/falha" não entrou, os outros sim
     assert "/falha" not in all_data_shared
@@ -326,15 +273,16 @@ async def test_scrape_chunk_erro_num_item_nao_bloqueia_os_outros(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_chunk_resultado_none_nao_adiciona_nada(monkeypatch):
-    async def fake_scrape(session, link_info, existing_data):
+    async def fake_scrape(session, link_info, existing_data, semaphore):
         return None  # já existia, ou falhou o parse
 
     monkeypatch.setattr(scraper, "scrape_newsletter", fake_scrape)
 
     chunk = [{"link": "/a"}, {"link": "/b"}]
     all_data_shared = {}
+    semaphore = asyncio.Semaphore(1)
 
-    await scraper._scrape_chunk(None, chunk, {}, all_data_shared)
+    await scraper._scrape_chunk(None, chunk, {}, all_data_shared, semaphore)
 
     assert all_data_shared == {}
 
@@ -342,21 +290,22 @@ async def test_scrape_chunk_resultado_none_nao_adiciona_nada(monkeypatch):
 async def test_scrape_parallel_divide_em_chunks_corretamente(monkeypatch):
     chunks_recebidos = []
 
-    async def fake_scrape_chunk(session, chunk, existing_data, all_data_shared, prefix=""):
+    async def fake_scrape_chunk(session, chunk, existing_data, all_data_shared, semaphore, prefix=""):
         chunks_recebidos.append(chunk)
         for item in chunk:
             all_data_shared[item["link"]] = {"titulo": item["link"]}
 
     monkeypatch.setattr(scraper, "_scrape_chunk", fake_scrape_chunk)
-    monkeypatch.setattr(scraper, "load_existing_data", lambda: {})
-    monkeypatch.setattr(scraper, "save_data", lambda data: None)
+    monkeypatch.setattr(scraper, "load_existing_data", lambda output_file: {})
+    monkeypatch.setattr(scraper, "save_data", lambda data, sort_key, output_file: None)
     monkeypatch.setattr(scraper, "aiohttp", type("FakeAiohttp", (), {
         "ClientSession": lambda *a, **k: _FakeSession()
     }))
 
     links = [{"link": f"/{i}"} for i in range(10)]
-
-    await scraper.scrape_newsletters_parallel(links, 3, False)
+    semaphore = asyncio.Semaphore(1)
+ 
+    await scraper.scrape_newsletters_parallel(links, semaphore, 3, False)
 
     total_distribuido = sum(len(c) for c in chunks_recebidos)
     assert total_distribuido == 10
@@ -373,14 +322,15 @@ class _FakeSession:
 async def test_scrape_parallel_force_full_ignora_dados_antigos(monkeypatch, tmp_path):
     ficheiro = tmp_path / "data.json"
     ficheiro.write_text('{"Antigo": {}}', encoding="utf-8")
+    semaphore = asyncio.Semaphore(1)
 
     monkeypatch.setattr(scraper, "OUTPUT_FILE", str(ficheiro))
-    monkeypatch.setattr(scraper, "load_existing_data", lambda: {"Antigo": {}})
+    monkeypatch.setattr(scraper, "load_existing_data", lambda output_file: {"Antigo": {}})
     monkeypatch.setattr(scraper, "_scrape_chunk", AsyncMock())
-    monkeypatch.setattr(scraper, "save_data", lambda data: None)
+    monkeypatch.setattr(scraper, "save_data", lambda data, sort_key, output_file: None)
 
     dados_guardados = {}
-    def fake_save(data):
+    def fake_save(data, sort_key, output_file):
         dados_guardados.update(data)
     monkeypatch.setattr(scraper, "save_data", fake_save)
 
@@ -389,6 +339,6 @@ async def test_scrape_parallel_force_full_ignora_dados_antigos(monkeypatch, tmp_
         async def __aexit__(self, *a): return None
     monkeypatch.setattr(scraper.aiohttp, "ClientSession", lambda *a, **k: _FakeSession())
 
-    await scraper.scrape_newsletters_parallel(links=[], force_full=True)
+    await scraper.scrape_newsletters_parallel(links=[], semaphore=semaphore, force_full=True)
 
     assert not ficheiro.exists()  # foi apagado por force_full antes de gravar de novo

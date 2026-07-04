@@ -265,18 +265,18 @@ async def test_scrape_paginated_source(monkeypatch):
     ]
     chamadas = {"n": 0}
 
-    async def fake_fetch(session, semaphore, url, escola):
+    async def fake_fetch_async(session, semaphore, url, **kwargs):
         chamadas["n"] += 1
         return "<html></html>"
 
     def fake_parse(html, escola):
         return paginas[chamadas["n"] - 1]
 
-    monkeypatch.setattr(scraper, "fetch", fake_fetch)
+    monkeypatch.setattr(scraper, "fetch_async", fake_fetch_async)
     monkeypatch.setattr(scraper, "parse_docentes", fake_parse)
 
     accumulated = {}
-    resultado = await scraper.scrape_paginated_source(None, None,"ISEL","http://x.com?page=", 3, accumulated)
+    resultado = await scraper.scrape_paginated_source(None, None, "ISEL","http://x.com?page=", 3, accumulated)
 
     assert resultado == 7 
     assert len([k for k in accumulated if k not in ("escola", "sourceUrl", "dateChecked")]) == 7
@@ -285,7 +285,7 @@ async def test_scrape_paginated_source(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_paginated_source_fetch_falha(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value=None))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value=None))
 
     accumulated = {}
     resultado = await scraper.scrape_paginated_source(None, None, "ISEL", "http://x.com?page=", 10, accumulated)
@@ -296,7 +296,7 @@ async def test_scrape_paginated_source_fetch_falha(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_paginated_source_parse_devolve_vazio(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_docentes", lambda html, escola: {})
 
     accumulated = {}
@@ -308,7 +308,7 @@ async def test_scrape_paginated_source_parse_devolve_vazio(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_paginated_source_uma_pagina_com_menos_que_max(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_docentes", lambda html, escola: {
         "Docente A": {"link": "/a"},
         "Docente B": {"link": "/b"},
@@ -333,7 +333,7 @@ async def test_scrape_paginated_source_multiplas_paginas(monkeypatch):
     ]
     chamadas = {"n": 0}
 
-    async def fake_fetch(session, semaphore, url, escola):
+    async def fake_fetch_async(session, semaphore, url, **kwargs):
         chamadas["n"] += 1
         return "<html></html>"
 
@@ -341,7 +341,7 @@ async def test_scrape_paginated_source_multiplas_paginas(monkeypatch):
         idx = chamadas["n"] - 1
         return paginas[idx] if idx < len(paginas) else {}
 
-    monkeypatch.setattr(scraper, "fetch", fake_fetch)
+    monkeypatch.setattr(scraper, "fetch_async", fake_fetch_async)
     monkeypatch.setattr(scraper, "parse_docentes", fake_parse)
 
     accumulated = {}
@@ -357,11 +357,11 @@ async def test_scrape_paginated_source_multiplas_paginas(monkeypatch):
 async def test_scrape_paginated_source_url_construida_corretamente(monkeypatch):
     urls_chamadas = []
 
-    async def fake_fetch(session, semaphore, url, escola):
+    async def fake_fetch_async(session, semaphore, url, **kwargs):
         urls_chamadas.append(url)
         return "<html></html>"
 
-    monkeypatch.setattr(scraper, "fetch", fake_fetch)
+    monkeypatch.setattr(scraper, "fetch_async", fake_fetch_async)
     monkeypatch.setattr(scraper, "parse_docentes", lambda html, escola: {})
     await scraper.scrape_paginated_source(None, None, "ISEL", "http://x.com?page=", 10, {}, start_page=3)
 
@@ -376,14 +376,14 @@ async def test_scrape_paginated_source_acumula_metadata_da_ultima_pagina(monkeyp
     ]
     chamadas = {"n": 0}
 
-    async def fake_fetch(session, semaphore, url, escola):
+    async def fake_fetch_async(session, semaphore, url, **kwargs):
         chamadas["n"] += 1
         return "<html></html>"
 
     def fake_parse(html, escola):
         return paginas[chamadas["n"] - 1]
 
-    monkeypatch.setattr(scraper, "fetch", fake_fetch)
+    monkeypatch.setattr(scraper, "fetch_async", fake_fetch_async)
     monkeypatch.setattr(scraper, "parse_docentes", fake_parse)
 
     accumulated = {}
@@ -396,11 +396,11 @@ async def test_scrape_paginated_source_acumula_metadata_da_ultima_pagina(monkeyp
 async def test_scrape_paginated_source_fetch_falha_na_segunda_pagina(monkeypatch):
     chamadas = {"n": 0}
 
-    async def fake_fetch(session, semaphore, url, escola):
+    async def fake_fetch_async(session, semaphore, url, **kwargs):
         chamadas["n"] += 1
         return "<html></html>" if chamadas["n"] == 1 else None
 
-    monkeypatch.setattr(scraper, "fetch", fake_fetch)
+    monkeypatch.setattr(scraper, "fetch_async", fake_fetch_async)
     monkeypatch.setattr(scraper, "parse_docentes", lambda html, escola: {
         "D1": {"link": "/1"}, "D2": {"link": "/2"}  
     })
@@ -413,7 +413,7 @@ async def test_scrape_paginated_source_fetch_falha_na_segunda_pagina(monkeypatch
 
 @pytest.mark.asyncio
 async def test_scrape_one(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_docentes", lambda html, escola: {
         "Docente A": {"link": "/a"},
     })
@@ -428,7 +428,7 @@ async def test_scrape_one(monkeypatch):
 @pytest.mark.asyncio
 async def test_scrape_one_ja_foi_scraped(monkeypatch):
     mock_fetch = AsyncMock()
-    monkeypatch.setattr(scraper, "fetch", mock_fetch)
+    monkeypatch.setattr(scraper, "fetch_async", mock_fetch)
 
     link_info = {"link": "http://x.com/1", "title": "Dep A"}
     resultado = await scraper.scrape_one(None, None, "ISEL", link_info, {"ISEL::Dep A"})
@@ -438,7 +438,7 @@ async def test_scrape_one_ja_foi_scraped(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_one_fetch_falha(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value=None))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value=None))
 
     link_info = {"link": "http://x.com/1", "title": "Dep A"}
     resultado = await scraper.scrape_one(None, None, "ISEL", link_info, set())
@@ -447,7 +447,7 @@ async def test_scrape_one_fetch_falha(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_one_parse_devolve_vazio(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_docentes", lambda html, escola: {})
 
     link_info = {"link": "http://x.com/1", "title": "Dep A"}
@@ -457,7 +457,7 @@ async def test_scrape_one_parse_devolve_vazio(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_one_sucesso_sem_title_usa_url_como_chave(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_docentes", lambda html, escola: {
         "Docente B": {"link": "/b"},
     })
@@ -470,7 +470,7 @@ async def test_scrape_one_sucesso_sem_title_usa_url_como_chave(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_scrape_one_source_url_adicionado_ao_record(monkeypatch):
-    monkeypatch.setattr(scraper, "fetch", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
     monkeypatch.setattr(scraper, "parse_docentes", lambda html, escola: {
         "Docente C": {"link": "/c"},
     })

@@ -3,9 +3,9 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from pathlib import Path
 import sys
-from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from time import sleep
 from utilis import load_existing_data, save_data, fetch, _print_summary
 
 # Configuração

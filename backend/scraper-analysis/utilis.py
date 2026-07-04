@@ -4,6 +4,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import aiohttp
 import asyncio
+from time import sleep
+import re
 
 # Função para carregar dados existentes de um arquivo JSON
 def load_existing_data(output_file):
