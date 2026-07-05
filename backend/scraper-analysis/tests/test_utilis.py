@@ -115,27 +115,6 @@ def test_save_data_caracteres_especiais(tmp_path):
     assert "João Çavá" in conteudo
     assert conteudo["João Çavá"]["título"] == "Investigação"
 
-def test_load_links_ficheiro_nao_existe(tmp_path):
-    ficheiro = tmp_path / "nao_existe.json"
-
-    resultado = utilis.load_links(str(ficheiro))
-    assert resultado == []
-
-def test_load_links_versao_newsletter(tmp_path):
-    ficheiro = tmp_path / "data.json"
-    dados = {
-        "Título A": {"link": "http://x.com/a", "dataPublicacao": "2026-01-01"},
-        "Título B": {"link": "http://x.com/b", "dataPublicacao": "2025-06-15"},
-    }
-    ficheiro.write_text(json.dumps(dados), encoding="utf-8")
-
-    resultado = utilis.load_links(str(ficheiro), True)
-
-    assert len(resultado) == 2
-    assert resultado[0]["titulo"] == "Título A"
-    assert resultado[0]["link"] == "http://x.com/a"
-    assert resultado[0]["dataPublicacao"] == "2026-01-01"
-
 def test_load_existing_data_ficheiro_nao_existe(tmp_path):
     ficheiro = tmp_path / "data.json"   
 
@@ -244,12 +223,7 @@ def test_save_data_caracteres_especiais(tmp_path):
     assert "João Ção" in conteudo
     assert conteudo["João Ção"]["título"] == "Investigação"
 
-def test_load_links_ficheiro_nao_existe(tmp_path):
-    ficheiro = tmp_path / "nao_existe.json"
-    resultado = utilis.load_links(str(ficheiro))
-    assert resultado == []
-
-def test_load_links_versao_newsletter(tmp_path):
+def test_load_links(tmp_path):
     ficheiro = tmp_path / "data.json"
     dados = {
         "Título A": {"link": "http://x.com/a", "dataPublicacao": "2026-01-01"},
@@ -257,81 +231,72 @@ def test_load_links_versao_newsletter(tmp_path):
     }
     ficheiro.write_text(json.dumps(dados), encoding="utf-8")
 
-    resultado = utilis.load_links(str(ficheiro), True)
+    field_map = {
+        "titulo": None,  # campo que será usado como identificador
+        "link": "link",
+        "dataPublicacao": "dataPublicacao"
+    }
+    resultado = utilis.load_links(str(ficheiro), field_map)
+
     assert len(resultado) == 2
     assert resultado[0]["titulo"] == "Título A"
     assert resultado[0]["link"] == "http://x.com/a"
     assert resultado[0]["dataPublicacao"] == "2026-01-01"
 
-def test_load_links_versao_newsletter_default(tmp_path):
-    ficheiro = tmp_path / "data.json"
-    dados = {"Título A": {"link": "http://x.com/a", "dataPublicacao": "2026-01-01"}}
-    ficheiro.write_text(json.dumps(dados), encoding="utf-8")
-
-    resultado = utilis.load_links(str(ficheiro))
-    assert "titulo" in resultado[0]
-    assert "link" in resultado[0]
-    assert "dataPublicacao" in resultado[0]
-
-def test_load_links_versao_cursos(tmp_path):
-    ficheiro = tmp_path / "data.json"
-    dados = {
-        "http://x.com/a": {"curso": "Título A", "tipoCurso": "Licenciatura", "escola": "ISEL"},
-        "http://x.com/b": {"curso": "Título B", "tipoCurso": "Mestrado", "escola": "IPL"},
+def test_load_links_ficheiro_nao_existe(tmp_path):
+    ficheiro = tmp_path / "nao_existe.json"
+    field_map = {
+        "titulo": "titulo",
+        "link": "link",
+        "dataPublicacao": "dataPublicacao"
     }
-    ficheiro.write_text(json.dumps(dados), encoding="utf-8")
 
-    resultado = utilis.load_links(str(ficheiro), False)
-    assert len(resultado) == 2
-    assert resultado[0]["link"] == "http://x.com/a"
-    assert resultado[0]["curso"] == "Título A"
-    assert resultado[0]["tipoCurso"] == "Licenciatura"
-    assert resultado[0]["escola"] == "ISEL"
-    assert resultado[1]["link"] == "http://x.com/b"
-    assert resultado[1]["curso"] == "Título B"
-    assert resultado[1]["tipoCurso"] == "Mestrado"
-    assert resultado[1]["escola"] == "IPL" 
-
-def test_load_links_newsletter_campos_ausentes_ficam_none(tmp_path):
-    ficheiro = tmp_path / "data.json"
-    dados = {"Título A": {}} 
-    ficheiro.write_text(json.dumps(dados), encoding="utf-8")
-
-    resultado = utilis.load_links(str(ficheiro))
-    assert resultado[0]["link"] is None
-    assert resultado[0]["dataPublicacao"] is None
+    resultado = utilis.load_links(str(ficheiro), field_map)
+    assert resultado == []
 
 def test_load_links_ficheiro_vazio(tmp_path):
     ficheiro = tmp_path / "data.json"
     ficheiro.write_text("{}", encoding="utf-8")
-    resultado = utilis.load_links(str(ficheiro))
+    field_map = {
+        "titulo": "titulo",
+        "link": "link",
+        "dataPublicacao": "dataPublicacao"
+    }
+    resultado = utilis.load_links(str(ficheiro), field_map)
     assert resultado == []
 
-def test_load_links_curso_campos_ausentes_ficam_none(tmp_path):
+def test_load_links_sem_uma_chave(tmp_path):
     ficheiro = tmp_path / "data.json"
-    dados = {"http://x.com/a": {}} 
+    dados = {
+        "Título A": {"link": "http://x.com/a", "dataPublicacao": "2026-01-01"},
+        "Título B": {"link": "http://x.com/b", "dataPublicacao": "2025-06-15"},
+    }
     ficheiro.write_text(json.dumps(dados), encoding="utf-8")
 
-    resultado = utilis.load_links(str(ficheiro), False)
-    assert resultado[0]["curso"] is None
-    assert resultado[0]["tipoCurso"] is None
-    assert resultado[0]["escola"] is None
+    field_map = {
+        "titulo": "titulo",  # campo que será usado como identificador
+        "link": "link",
+        "dataPublicacao": "dataPublicacao"
+    }
+    resultado = utilis.load_links(str(ficheiro), field_map)
 
-@pytest.mark.parametrize("newsletter", [True, False])
-def test_load_links_estrutura_chaves_por_modo(tmp_path, newsletter):
-    """Confirma que as chaves do dict devolvido são as correctas para cada modo."""
+    assert len(resultado) == 2
+    assert resultado[0]["titulo"] == None #nao existe uma propriedade "titulo" no JSON, logo deve ser None
+    assert resultado[0]["link"] == "http://x.com/a"
+    assert resultado[0]["dataPublicacao"] == "2026-01-01"
+
+def test_load_links_sem_field_map(tmp_path):
     ficheiro = tmp_path / "data.json"
-    if newsletter:
-        dados = {"Título": {"link": "http://x.com", "dataPublicacao": "2026"}}
-        chaves_esperadas = {"titulo", "link", "dataPublicacao"}
-    else:
-        dados = {"http://x.com": {"curso": "Curso", "tipoCurso": "Licenciatura", "escola": "ISEL"}}
-        chaves_esperadas = {"curso", "link", "tipoCurso", "escola"}
-
+    dados = {
+        "Título A": {"link": "http://x.com/a", "dataPublicacao": "2026-01-01"},
+        "Título B": {"link": "http://x.com/b", "dataPublicacao": "2025-06-15"},
+    }
     ficheiro.write_text(json.dumps(dados), encoding="utf-8")
 
-    resultado = utilis.load_links(str(ficheiro), newsletter)
-    assert set(resultado[0].keys()) == chaves_esperadas
+    resultado = utilis.load_links(str(ficheiro), {})
+    assert len(resultado) == 2
+    assert resultado[0] == {}
+    assert resultado[1] == {}
 
 def test_fetch():
     with patch("utilis.urlopen") as mock_urlopen:
@@ -752,3 +717,27 @@ async def test_scrape_parallel_force_full_ignora_dados_antigos(monkeypatch, tmp_
     await utilis.scrape_parallel(ficheiro, [], semaphore, sort_key, fake_scrape_something, num_scrapers, force_full=True)
 
     assert not ficheiro.exists()  # foi apagado por force_full antes de gravar de novo
+
+def test_load_all_existing_data(monkeypatch, tmp_path):
+    data_2026 = {"link1": {"titulo": "Item 1", "dataPublicacao": "2026-01-01"}}
+    data_2025 = {"link2": {"titulo": "Item 2", "dataPublicacao": "2025-01-01"}}
+    (tmp_path / "test_file_2026.json").write_text(json.dumps(data_2026), encoding="utf-8")
+    (tmp_path / "test_file_2025.json").write_text(json.dumps(data_2025), encoding="utf-8")
+
+    done_links, existing_items, total_count = utilis.load_existing_data_from_files_with_same_prefix(tmp_path, "test_file")
+
+    assert existing_items == data_2026.keys() | data_2025.keys()
+    assert done_links == {**data_2026, **data_2025}
+    assert total_count == 2
+
+def test_load_all_existing_data_file_not_valid(monkeypatch, tmp_path):
+    data_2026 = {"link1": {"titulo": "Item 1", "dataPublicacao": "2026-01-01"}}
+    data_2025 = [{"link_invalido": "nao_e_um_dicionario"}]  # Invalid JSON
+    (tmp_path / "test_file_2026.json").write_text(json.dumps(data_2026), encoding="utf-8")
+    (tmp_path / "test_file_2025.json").write_text(json.dumps(data_2025), encoding="utf-8")
+
+    done_links, existing_items, total_count = utilis.load_existing_data_from_files_with_same_prefix(tmp_path, "test_file")
+
+    assert existing_items == data_2026.keys()
+    assert done_links == {**data_2026}
+    assert total_count == 1

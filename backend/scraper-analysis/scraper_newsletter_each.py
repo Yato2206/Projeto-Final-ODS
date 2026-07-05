@@ -152,7 +152,12 @@ async def main():
 
     semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
     # Load newsletters to scrape
-    links = load_links(INPUT_FILE)
+    newsletter_fields = {
+        "titulo":         None,              # usa o título (key do JSON)
+        "link":           "link",
+        "dataPublicacao": "dataPublicacao",
+    }
+    links = load_links(INPUT_FILE, newsletter_fields)
 
     if not links:
         print("No links to scrape")

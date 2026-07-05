@@ -16,34 +16,6 @@ def test_get_year_filename(monkeypatch, tmp_path):
     esperado = str(tmp_path / f"repo_cientifico_{year}.json")
     assert resultado == esperado
 
-def test_load_all_existing_data(monkeypatch, tmp_path):
-    # Cria ficheiros de teste
-    data_2026 = {"link1": {"titulo": "Item 1", "dataPublicacao": "2026-01-01"}}
-    data_2025 = {"link2": {"titulo": "Item 2", "dataPublicacao": "2025-01-01"}}
-    (tmp_path / "repo_cientifico_2026.json").write_text(json.dumps(data_2026), encoding="utf-8")
-    (tmp_path / "repo_cientifico_2025.json").write_text(json.dumps(data_2025), encoding="utf-8")
-
-    monkeypatch.setattr(scraper, "DOCUMENTS_DIR", tmp_path)
-    done_links, existing_items, total_count = scraper.load_all_existing_data()
-
-    assert done_links == data_2026.keys() | data_2025.keys()
-    assert existing_items == {**data_2026, **data_2025}
-    assert total_count == 2
-
-def test_load_all_existing_data_file_not_valid(monkeypatch, tmp_path):
-    # Cria ficheiros de teste
-    data_2026 = {"link1": {"titulo": "Item 1", "dataPublicacao": "2026-01-01"}}
-    data_2025 = [{"link_invalido": "nao_e_um_dicionario"}]  # Invalid JSON
-    (tmp_path / "repo_cientifico_2026.json").write_text(json.dumps(data_2026), encoding="utf-8")
-    (tmp_path / "repo_cientifico_2025.json").write_text(json.dumps(data_2025), encoding="utf-8")
-
-    monkeypatch.setattr(scraper, "DOCUMENTS_DIR", tmp_path)
-    done_links, existing_items, total_count = scraper.load_all_existing_data()
-
-    assert done_links == data_2026.keys()
-    assert existing_items == {**data_2026}
-    assert total_count == 1
-
 def test_extract_year_from_date():
     date_str = "2026-06-20"
     year = scraper.extract_year_from_date(date_str)

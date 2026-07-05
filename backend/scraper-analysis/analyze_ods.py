@@ -5,6 +5,7 @@ import glob
 import os
 import nltk
 from nltk.corpus import stopwords
+from utilis import load_existing_data_from_files_with_same_prefix
 
 nltk.download('punkt')
 nltk.download('punkt_tab')
@@ -21,7 +22,6 @@ def preprocessar_texto(texto):
     return " ".join(palavras)
 
 def classificar_ods(titulo, texto_conteudo):
-
     taxonomias = {}
     taxonomia_files = {
         'UoA': os.path.join(BASE_DIR, 'documents', 'taxonomies', 'taxo_UoA.json'),
@@ -56,25 +56,11 @@ def classificar_ods(titulo, texto_conteudo):
 
     return resultados
 
-def load_existing_results(output_dir):
-    files = os.path.join(output_dir, 'resultados_ods_*.json')
-    existing = {}
-
-    for fpath in sorted(glob.glob(files)):
-        try:
-            with open(fpath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                existing.update(data)
-        except Exception as e:
-            print(f"Warning: could not load existing results '{fpath}': {e}")
-    return existing
-
 def process_files_and_save(files_pattern, chunk_size=1000):
     output_dir = os.path.join(BASE_DIR, '..', '..', 'frontend', 'public')
     os.makedirs(output_dir, exist_ok=True)
 
-    existing_results = load_existing_results(output_dir)
+    existing_results, _, _ = load_existing_data_from_files_with_same_prefix(output_dir, "resultados_ods")#load_existing_results(output_dir)
     print(f"Loaded {len(existing_results)} results from output.")
 
     dados_consolidados = dict(existing_results)

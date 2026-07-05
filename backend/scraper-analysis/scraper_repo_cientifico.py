@@ -3,6 +3,7 @@ import json
 from playwright.async_api import async_playwright
 from pathlib import Path
 from datetime import datetime, timezone
+from utilis import load_existing_data_from_files_with_same_prefix
 import glob
 import re
 import sys
@@ -26,26 +27,6 @@ YEARS_TO_SCRAPE = [CURRENT_YEAR, CURRENT_YEAR-1, CURRENT_YEAR-2, CURRENT_YEAR-3,
 
 def get_year_filename(year):
     return str(DOCUMENTS_DIR / f"repo_cientifico_{year}.json")
-
-def load_all_existing_data():
-    """Load all existing data from all files."""
-    done_links = set()
-    existing_items = {}
-    total_count = 0
-
-    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
-    for file in existing_files:
-        try:
-            with open(file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    existing_items.update(data)
-                    done_links.update(data.keys())
-                    total_count += len(data)
-        except:
-            pass
-
-    return done_links, existing_items, total_count
 
 def extract_year_from_date(date_str):
     """Extract year from date string"""
@@ -459,7 +440,7 @@ async def main():
     print(f"{'='*100}\n")
 
     # Load existing data
-    done_links, existing_items, total_existing = load_all_existing_data()
+    existing_items, done_links, total_existing = load_existing_data_from_files_with_same_prefix(DOCUMENTS_DIR, "repo_cientifico") # load_all_existing_data()
     existing_files_count = len(glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json")))
     print(f"Existing data: {total_existing} items in {existing_files_count} files")
     print(f"Already scraped links: {len(done_links)}\n")

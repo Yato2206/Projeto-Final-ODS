@@ -66,7 +66,13 @@ async def main():
     semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 
     # Load cursos to scrape
-    links = load_links(INPUT_FILE, False)
+    curso_fields = {
+        "curso":          "curso",           
+        "link":           None,           
+        "tipoCurso":      "tipoCurso",
+        "escola":         "escola",
+    }
+    links = load_links(INPUT_FILE, curso_fields)
 
     if not links:
         print("No links to scrape")

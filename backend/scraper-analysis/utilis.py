@@ -6,6 +6,8 @@ import aiohttp
 import asyncio
 from time import sleep
 import re
+import glob
+import os
 
 # Função para carregar dados existentes de um arquivo JSON
 # O parametro output_file é o caminho do arquivo JSON que contém os dados existentes, já que 
@@ -31,8 +33,9 @@ def save_data(data, sort_key, output_file):
 
 # Função para carregar os links de ficheiros JSON. 
 # Usada para os scrapers que acedem a links de ficheiros JSON, como o scraper de newsletters e cursos.
-# Parametro newsletter é um booleano que indica se os links são de newsletters(true) ou de cursos (falso)
-def load_links(input_file, newsletter=True):
+# Parametro field_map é um dicionário que mapeia os campos do ficheiro JSON para os campos desejados na saída, sendo 
+#aquele com valor None o campo que será usado como o identificador do item (ex.: título ou link).
+def load_links(input_file, field_map):
     if not Path(input_file).exists():
         print(f"Error: {input_file} not found")
         return []
@@ -43,19 +46,10 @@ def load_links(input_file, newsletter=True):
     # Extract links and their publication dates
     links = []
     for title, info in data.items():
-        if newsletter:
-            links.append({
-                "titulo": title,
-                "link": info.get("link"),
-                "dataPublicacao": info.get("dataPublicacao")
-            })
-        else: 
-            links.append({
-                "curso": info.get("curso"),
-                "link": title,
-                "tipoCurso": info.get("tipoCurso"),
-                "escola": info.get("escola")
-            })
+        entry = {}
+        for output_key, source_key in field_map.items():
+            entry[output_key] = title if source_key is None else info.get(source_key)
+        links.append(entry)
 
     return links
 
@@ -164,8 +158,8 @@ def _scrape_sequential(base_url, parse_page, start_page, existing_data, all_shar
         page += 1
         sleep(1)
 
+#Scrape um chunk de items (newsletters ou cursos)
 async def _scrape_chunk(session, chunk, existing_data, all_data_shared, semaphore, scrape_func, prefix=""):
-    """Scrape a chunk of items (newsletters or cursos)"""
     for link_info in chunk:
         try:
             result = await scrape_func(session, link_info, existing_data, semaphore)
@@ -176,9 +170,9 @@ async def _scrape_chunk(session, chunk, existing_data, all_data_shared, semaphor
         except Exception as e:
             print(f"  {prefix} Error scraping {link_info['link']}: {e}")
 
-
+#Scrape com scrapers a rodar em paralelo
 async def scrape_parallel(output_file, links, semaphore, sort_key, scrape_func, num_scrapers, force_full=False):
-    """Scrape with parallel scrapers"""
+
     if force_full and Path(output_file).exists():
         Path(output_file).unlink()
         print(f"Removed existing {output_file} before full scrape")
@@ -214,3 +208,24 @@ async def scrape_parallel(output_file, links, semaphore, sort_key, scrape_func, 
     # Summary
     new_count = len(all_data) - len(previous_data)
     _print_summary(previous_data, all_data)
+
+# Função para carregar dados existentes de todos os ficheiros com o mesmo prefixo
+def load_existing_data_from_files_with_same_prefix(output_dir, filename_prefix):
+    done_links = set()
+    existing_items = {}
+    total_count = 0
+    files = os.path.join(output_dir, f"{filename_prefix}*.json")
+
+    existing_files = glob.glob(files)
+    for fpath in existing_files:
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    existing_items.update(data)
+                    done_links.update(data.keys())
+                    total_count += len(data)
+        except Exception as e:
+            print(f"Warning: could not load '{fpath}': {e}")
+
+    return existing_items, done_links, total_count
