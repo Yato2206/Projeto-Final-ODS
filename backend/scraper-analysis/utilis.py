@@ -7,9 +7,10 @@ import asyncio
 from time import sleep
 import re
 
-# Função para carregar dados existentes de um arquivo JSON~
+# Função para carregar dados existentes de um arquivo JSON
 # O parametro output_file é o caminho do arquivo JSON que contém os dados existentes, já que 
 # os scrapers podem ser executados várias vezes, e queremos preservar os dados já coletados.
+# Carrega um ficheiro
 def load_existing_data(output_file):
     if Path(output_file).exists():
         with open(output_file, "r", encoding="utf-8") as f:

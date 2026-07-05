@@ -73,7 +73,7 @@ def test_format_newsletter_documents_with_one_noticias():
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["autores"] == "Autor Desconhecido"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["texto"] == "Texto da notícia 1"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["dataPublicacao"] == "2026-06-06"
-    assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["tipo"] == "Newsletter"
+    assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["tipo"] == "Noticia da Newsletter"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["dateChecked"] == "2026-06-28T20:26:53.108757"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["origem"] == "Newsletter"
 
@@ -119,7 +119,7 @@ def test_format_newsletter_documents_with_more_than_one_noticias():
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["autores"] == "Autor Desconhecido"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["texto"] == "Texto da notícia 1"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["dataPublicacao"] == "2026-06-06"
-    assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["tipo"] == "Newsletter"
+    assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["tipo"] == "Noticia da Newsletter"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["dateChecked"] == "2026-06-28T20:26:53.108757"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-0"]["origem"] == "Newsletter"
     assert "https://www.ipl.pt/newsletter/test#noticia-1" in resultado
@@ -127,7 +127,7 @@ def test_format_newsletter_documents_with_more_than_one_noticias():
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-1"]["autores"] == "Autor Desconhecido"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-1"]["texto"] == "Texto da notícia 2"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-1"]["dataPublicacao"] == "2026-06-06"
-    assert resultado["https://www.ipl.pt/newsletter/test#noticia-1"]["tipo"] == "Newsletter"
+    assert resultado["https://www.ipl.pt/newsletter/test#noticia-1"]["tipo"] == "Noticia da Newsletter"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-1"]["dateChecked"] == "2026-06-28T20:26:53.108757"
     assert resultado["https://www.ipl.pt/newsletter/test#noticia-1"]["origem"] == "Newsletter"
 
@@ -229,11 +229,21 @@ def test_merge_and_save():
             "origem": "Scopus"
         }
     }
-    conteudo_mock = {**newsletter_docs, **scientific_repo_docs, **scopus_docs}
+    cursos_docs = {
+        "https://www.ipl.pt/cursos/test": {
+            "curso": "Cursos Test",
+            "autores": "ISEL",
+            "texto": "Texto que descreve o documento de cursos.",
+            "tipo": "tipo Teste",
+            "dateChecked": "2026-06-28T20:26:53.108757",
+            "origem": "ISEL"
+        }
+    }
+    conteudo_mock = {**newsletter_docs, **scientific_repo_docs, **scopus_docs, **cursos_docs}
     with patch("builtins.open", mock_open()) as mock_file, \
          patch("pathlib.Path.mkdir", return_value=None):
-            resultado = formatDocuments.merge_and_save(newsletter_docs, scientific_repo_docs, scopus_docs)
-    assert len(resultado) == 3
+            resultado = formatDocuments.merge_and_save(newsletter_docs, scientific_repo_docs, scopus_docs, cursos_docs)
+    assert len(resultado) == 4
 
 def test_parse_args_com_diretorias_extra():
     argumentos_falsos = [

@@ -15,8 +15,6 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 # Configuração
-ITEMS_PER_FILE = 1000
-BATCH_SIZE = 100
 HEADLESS = True  # Muda para False para ver os browsers
 DOCUMENTS_DIR = Path("documents/repo_cientifico")
 
@@ -25,30 +23,14 @@ CURRENT_YEAR = datetime.now().year
 # Years to scrape (one browser per year)
 YEARS_TO_SCRAPE = [CURRENT_YEAR, CURRENT_YEAR-1, CURRENT_YEAR-2, CURRENT_YEAR-3, CURRENT_YEAR-4, CURRENT_YEAR-5]  # Periodo de 5 anos + o atual
 #YEARS_TO_SCRAPE = [CURRENT_YEAR-5]
-# Global variables
-current_file_index = 1
-items_in_current_file = 0
-file_lock = asyncio.Lock()
 
-def get_data_filename(index):
-    return str(DOCUMENTS_DIR / f"repo_cientifico_{index}.json")
-
-def get_current_file_index():
-    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
-    if not existing_files:
-        return 1
-    indices = []
-    for file in existing_files:
-        try:
-            idx = int(file.replace("repo_cientifico_", "").replace(".json", ""))
-            indices.append(idx)
-        except:
-            pass
-    return max(indices) if indices else 1
+def get_year_filename(year):
+    return str(DOCUMENTS_DIR / f"repo_cientifico_{year}.json")
 
 def load_all_existing_data():
-    """Load all existing data from all files"""
+    """Load all existing data from all files."""
     done_links = set()
+    existing_items = {}
     total_count = 0
 
     existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
@@ -57,51 +39,13 @@ def load_all_existing_data():
             with open(file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
+                    existing_items.update(data)
                     done_links.update(data.keys())
                     total_count += len(data)
         except:
             pass
 
-    return done_links, total_count
-
-async def save_to_rotating_file(data_batch):
-    """Save items to rotating files (1000 items per file)"""
-    global current_file_index, items_in_current_file
-
-    async with file_lock:
-        remaining_items = dict(data_batch)
-
-        while remaining_items:
-            current_filename = get_data_filename(current_file_index)
-
-            try:
-                with open(current_filename, "r", encoding="utf-8") as f:
-                    current_data = json.load(f)
-            except:
-                current_data = {}
-
-            items_in_current_file = len(current_data)
-            space_available = ITEMS_PER_FILE - items_in_current_file
-
-            if space_available <= 0:
-                current_file_index += 1
-                print(f"Rotating to {get_data_filename(current_file_index)}")
-                continue
-
-            items_to_add = dict(list(remaining_items.items())[:space_available])
-            current_data.update(items_to_add)
-
-            with open(current_filename, "w", encoding="utf-8") as f:
-                json.dump(current_data, f, ensure_ascii=False, indent=2)
-
-            print(f"Saved to {current_filename} ({len(current_data)} items)")
-
-            for key in items_to_add:
-                del remaining_items[key]
-
-            if len(current_data) >= ITEMS_PER_FILE:
-                current_file_index += 1
-                print(f"  File full → Rotating to {get_data_filename(current_file_index)}")
+    return done_links, existing_items, total_count
 
 def extract_year_from_date(date_str):
     """Extract year from date string"""
@@ -114,6 +58,57 @@ def extract_year_from_date(date_str):
         return int(year_match.group())
     except ValueError:
         return None
+
+def extract_publication_year(item_data):
+    return extract_year_from_date(item_data.get("dataPublicacao", ""))
+
+def parse_checked_timestamp(item_data):
+    raw_value = item_data.get("dateChecked")
+    if not raw_value:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+    try:
+        parsed_value = datetime.fromisoformat(raw_value)
+        if parsed_value.tzinfo is None:
+            parsed_value = parsed_value.replace(tzinfo=timezone.utc)
+        return parsed_value
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+def sort_items_for_output(items_by_link):
+    ordered_items = sorted(
+        items_by_link.items(),
+        key=lambda item: (
+            -(extract_publication_year(item[1]) or -1),
+            -parse_checked_timestamp(item[1]).timestamp(),
+            item[0],
+        ),
+    )
+    return {link: data for link, data in ordered_items}
+
+def save_yearly_files(all_items):
+    """Rewrite the repository output as one file per publication year."""
+    existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
+    for file_path in existing_files:
+        try:
+            Path(file_path).unlink()
+        except Exception as e:
+            print(f"  Failed to delete {file_path}: {e}")
+
+    items_by_year = {}
+    for link, data in all_items.items():
+        year = extract_publication_year(data)
+        if year is None:
+            continue
+        items_by_year.setdefault(year, {})[link] = data
+
+    for year in sorted(items_by_year.keys(), reverse=True):
+        filename = get_year_filename(year)
+        ordered_year_items = sort_items_for_output(items_by_year[year])
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(ordered_year_items, f, ensure_ascii=False, indent=2)
+        print(f"Saved {len(ordered_year_items)} items to {filename}")
+
 
 EXTRACT_ITEM_JS = """el => {
     const getText = (selector) => {
@@ -419,10 +414,6 @@ async def scrape_collection_by_year(page, year, done_links, force_full=False):
         if found_in_page == 0:
             log.info("No new items on page %d → Already scraped previously, stopping", page_count)
             break
-        if len(batch) >= BATCH_SIZE:
-            await save_to_rotating_file(batch)
-            done_links.update(batch.keys())
-            batch = {}
         if reached_duplicate:
             log.info("Year %s complete (duplicates found)", year)
             break
@@ -432,11 +423,10 @@ async def scrape_collection_by_year(page, year, done_links, force_full=False):
         page_count += 1
  
     if batch:
-        await save_to_rotating_file(batch)
         done_links.update(batch.keys())
  
     log.info("[YEAR %s] Complete: %d items found, %d skipped", year, items_found, items_skipped)
-    return items_found
+    return batch
 
 
 async def scrape_with_year_filter(year, done_links, force_full=False):
@@ -460,37 +450,18 @@ async def scrape_with_year_filter(year, done_links, force_full=False):
             await browser.close()
 
 async def main():
-    global current_file_index
-
     DOCUMENTS_DIR.mkdir(exist_ok=True)
 
     force_full = len(sys.argv) > 1 and sys.argv[1].strip().lower() == "true"
-
-    # Delete all existing repo_cientifico_*.json files if force_full is enabled
-    if force_full:
-        existing_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico" / "repo_cientifico_*.json"))
-        if existing_files:
-            print("Force mode: Deleting existing repo files...")
-            for file in existing_files:
-                try:
-                    import os
-                    os.remove(file)
-                    print(f"  Deleted: {file}")
-                except Exception as e:
-                    print(f"  Failed to delete {file}: {e}")
-        current_file_index = 1
-        print("Reset file index to 1\n")
-    else:
-        current_file_index = get_current_file_index()
 
     print(f"\n{'='*100}")
     print(f"PLAYWRIGHT SCRAPER - Scraping All Publications by Year")
     print(f"{'='*100}\n")
 
     # Load existing data
-    done_links, total_existing = load_all_existing_data()
-    print(f"Existing data: {total_existing} items in {len(glob.glob(f'{DOCUMENTS_DIR}/repo_cientifico/repo_cientifico_*.json'))} files")
-    print(f"Next file: {get_data_filename(current_file_index)}")
+    done_links, existing_items, total_existing = load_all_existing_data()
+    existing_files_count = len(glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json")))
+    print(f"Existing data: {total_existing} items in {existing_files_count} files")
     print(f"Already scraped links: {len(done_links)}\n")
 
     print(f"Years to scrape: {YEARS_TO_SCRAPE}")
@@ -511,15 +482,19 @@ async def main():
     # Print results
     print(f"\n{'='*100}\n")
     total_items_scraped = 0
+    scraped_items = dict(existing_items) if not force_full else {}
     for year, result in zip(YEARS_TO_SCRAPE, results):
-        if isinstance(result, int):
-            total_items_scraped += result
-            print(f"Year {year}: {result} items")
+        if isinstance(result, dict):
+            total_items_scraped += len(result)
+            scraped_items.update(result)
+            print(f"Year {year}: {len(result)} items")
         else:
             print(f"Year {year}: Error - {result}")
 
+    save_yearly_files(scraped_items)
+
     # Final info
-    all_files = glob.glob(f'{DOCUMENTS_DIR}/repo_cientifico/repo_cientifico_*.json')
+    all_files = glob.glob(str(DOCUMENTS_DIR / "repo_cientifico_*.json"))
     total_items = 0
     for file in all_files:
         try:

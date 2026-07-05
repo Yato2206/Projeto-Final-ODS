@@ -7,7 +7,42 @@ import json
 import scraper_repo_cientifico as scraper
 from playwright.async_api import async_playwright
 from urllib.error import HTTPError
-from datetime import datetime
+from datetime import datetime, timezone
+
+def test_get_year_filename(monkeypatch, tmp_path):
+    year = 2026
+    monkeypatch.setattr(scraper, "DOCUMENTS_DIR", tmp_path)
+    resultado  = scraper.get_year_filename(year)
+    esperado = str(tmp_path / f"repo_cientifico_{year}.json")
+    assert resultado == esperado
+
+def test_load_all_existing_data(monkeypatch, tmp_path):
+    # Cria ficheiros de teste
+    data_2026 = {"link1": {"titulo": "Item 1", "dataPublicacao": "2026-01-01"}}
+    data_2025 = {"link2": {"titulo": "Item 2", "dataPublicacao": "2025-01-01"}}
+    (tmp_path / "repo_cientifico_2026.json").write_text(json.dumps(data_2026), encoding="utf-8")
+    (tmp_path / "repo_cientifico_2025.json").write_text(json.dumps(data_2025), encoding="utf-8")
+
+    monkeypatch.setattr(scraper, "DOCUMENTS_DIR", tmp_path)
+    done_links, existing_items, total_count = scraper.load_all_existing_data()
+
+    assert done_links == data_2026.keys() | data_2025.keys()
+    assert existing_items == {**data_2026, **data_2025}
+    assert total_count == 2
+
+def test_load_all_existing_data_file_not_valid(monkeypatch, tmp_path):
+    # Cria ficheiros de teste
+    data_2026 = {"link1": {"titulo": "Item 1", "dataPublicacao": "2026-01-01"}}
+    data_2025 = [{"link_invalido": "nao_e_um_dicionario"}]  # Invalid JSON
+    (tmp_path / "repo_cientifico_2026.json").write_text(json.dumps(data_2026), encoding="utf-8")
+    (tmp_path / "repo_cientifico_2025.json").write_text(json.dumps(data_2025), encoding="utf-8")
+
+    monkeypatch.setattr(scraper, "DOCUMENTS_DIR", tmp_path)
+    done_links, existing_items, total_count = scraper.load_all_existing_data()
+
+    assert done_links == data_2026.keys()
+    assert existing_items == {**data_2026}
+    assert total_count == 1
 
 def test_extract_year_from_date():
     date_str = "2026-06-20"
@@ -28,6 +63,88 @@ def test_extract_year_from_date_empty():
     date_str = ""
     year = scraper.extract_year_from_date(date_str)
     assert year is None
+
+def test_extract_publication_year():
+    item_data = {"dataPublicacao": "2026-06-20"}
+    year = scraper.extract_publication_year(item_data)
+    assert year == 2026
+
+def test_parse_checked_timestamp():
+    item_data = {"dateChecked": "2026-07-05T14:00:00+01:00"}
+    resultado = scraper.parse_checked_timestamp(item_data)
+    esperado = datetime.fromisoformat("2026-07-05T14:00:00+01:00")
+    assert resultado == esperado
+
+@pytest.mark.parametrize("invalid_item_data", [
+    ({}),
+    ({"dateChecked": ""}),
+    ({"dateChecked": None}),
+])
+def test_parse_checked_timestamp_invalid(invalid_item_data):
+    resultado = scraper.parse_checked_timestamp(invalid_item_data)
+    esperado = datetime.min.replace(tzinfo=timezone.utc)
+    assert resultado == esperado
+
+def test_sort_items_for_output():
+    items_by_link = {
+        "link_c": {"id": "C"},
+        "link_a": {"id": "A"},
+        "link_b": {"id": "B"},
+        "link_d": {"id": "D"},
+    }
+    mock_years = [2025, 2026, 2026, None]
+    mock_dates = [
+        datetime(2026, 1, 1, tzinfo=timezone.utc), 
+        datetime(2026, 7, 1, tzinfo=timezone.utc),
+        datetime(2026, 7, 5, tzinfo=timezone.utc), 
+        datetime(2026, 1, 1, tzinfo=timezone.utc),  
+    ]
+    with patch("scraper_repo_cientifico.extract_publication_year") as mock_year_func, \
+         patch("scraper_repo_cientifico.parse_checked_timestamp") as mock_date_func:
+        
+        mock_year_func.side_effect = mock_years
+        mock_date_func.side_effect = mock_dates
+
+        resultado = scraper.sort_items_for_output(items_by_link)
+    ordem_esperada = ["link_b", "link_a", "link_c", "link_d"]
+    
+    assert list(resultado.keys()) == ordem_esperada
+
+def test_save_yearly_files(monkeypatch, tmp_path):
+    monkeypatch.setattr(scraper, "DOCUMENTS_DIR", tmp_path)
+    old_file = tmp_path / "repo_cientifico_2020.json"
+    old_file.write_text("{}", encoding="utf-8")
+    all_items = {
+        "link_a": {"dados": "A"},
+        "link_b": {"dados": "B"},
+        "link_c": {"dados": "C"},
+    }
+    mock_years = [2026, None, 2025]
+
+    def mock_sort(items):
+        return items
+
+    def mock_filename(year):
+        return str(tmp_path / f"repo_cientifico_{year}.json")
+
+    with patch("scraper_repo_cientifico.extract_publication_year") as mock_extract, \
+         patch("scraper_repo_cientifico.get_year_filename", side_effect=mock_filename), \
+         patch("scraper_repo_cientifico.sort_items_for_output", side_effect=mock_sort):
+        
+        mock_extract.side_effect = mock_years
+        scraper.save_yearly_files(all_items)
+
+    assert not old_file.exists()
+    file_2026 = tmp_path / "repo_cientifico_2026.json"
+    assert file_2026.exists()
+    dados_2026 = json.loads(file_2026.read_text(encoding="utf-8"))
+    assert dados_2026 == {"link_a": {"dados": "A"}}
+    file_2025 = tmp_path / "repo_cientifico_2025.json"
+    assert file_2025.exists()
+    dados_2025 = json.loads(file_2025.read_text(encoding="utf-8"))
+    assert dados_2025 == {"link_c": {"dados": "C"}}
+    ficheiros_finais = list(tmp_path.glob("repo_cientifico_*.json"))
+    assert len(ficheiros_finais) == 2
 
 @pytest.mark.asyncio
 async def test_extract_item_data():
@@ -571,7 +688,7 @@ def _mock_all_steps(monkeypatch, **overrides):
         "fill_min_date": AsyncMock(return_value=True),
         "fill_max_date": AsyncMock(return_value=True),
         "go_next_page": AsyncMock(return_value=False),  # por defeito, só uma página
-        "save_to_rotating_file": AsyncMock(),
+        "save_yearly_files": AsyncMock(),
         "scrape_items_from_page": AsyncMock(return_value=(0, 0, False)),
     }
     defaults.update(overrides)
@@ -643,96 +760,86 @@ async def test_scrape_collection_by_year_para_quando_nao_ha_novos_itens(monkeypa
 
     resultado = await scraper.scrape_collection_by_year(page=mock_page, year=2026, done_links=set())
 
-    assert resultado == 0
+    assert resultado == {}
     mocks["go_next_page"].assert_not_called() 
 
 
 @pytest.mark.asyncio
 async def test_scrape_collection_by_year_continua_para_proxima_pagina_enquanto_houver_itens(monkeypatch, mock_page):
-    """3 páginas com itens, a 4ª sem itens novos -> pára."""
+    """3 páginas com itens, a 4ª sem itens novos -> para."""
+    chamada_idx = 0 
+    async def mock_scrape_side_effect(page, year, done_links, batch, items_skipped, page_count, force_full):
+        nonlocal chamada_idx
+        respostas = [
+            (5, 0, False),  # 1ª página: achou 5
+            (5, 0, False),  # 2ª página: achou 5
+            (5, 0, False),  # 3ª página: achou 5
+            (0, 0, False),  # 4ª página: achou 0 (condição de paragem)
+        ]
+        
+        retorno = respostas[chamada_idx]
+        itens_encontrados = retorno[0]
+        if itens_encontrados > 0:
+            for i in range(itens_encontrados):
+                # Cria chaves únicas (ex: "link_p1_0", "link_p1_1", etc.)
+                batch[f"link_p{page_count}_{i}"] = {"dados": "teste"}
+                
+        chamada_idx += 1
+        return retorno
+    
     mocks = _mock_all_steps(
         monkeypatch,
-        scrape_items_from_page=AsyncMock(side_effect=[
-            (5, 0, False),
-            (5, 0, False),
-            (5, 0, False),
-            (0, 0, False),
-        ]),
-        go_next_page=AsyncMock(side_effect=[True, True, True]),
+        scrape_items_from_page=AsyncMock(side_effect=mock_scrape_side_effect),
+        go_next_page=AsyncMock(side_effect=[True, True, True, False]), # Adicionado um False por segurança
     )
 
     resultado = await scraper.scrape_collection_by_year(page=mock_page, year=2026, done_links=set())
 
-    assert resultado == 15  # 5+5+5+0
+    assert len(resultado) == 15  # 5+5+5+0
     assert mocks["scrape_items_from_page"].call_count == 4
     assert mocks["go_next_page"].call_count == 3
 
 
 @pytest.mark.asyncio
 async def test_scrape_collection_by_year_para_ao_encontrar_duplicado(monkeypatch, mock_page):
+    async def fake_scrape(page, year, done_links, batch, items_skipped, page_count, force_full):
+        for i in range(3):
+            batch[f"link_duplicado_{i}"] = {"dados": "teste"}
+        return 3, 0, True  # reached_duplicate = True
+
     mocks = _mock_all_steps(
         monkeypatch,
-        scrape_items_from_page=AsyncMock(return_value=(3, 0, True)),  # reached_duplicate=True
+        scrape_items_from_page=AsyncMock(side_effect=fake_scrape),
     )
 
     resultado = await scraper.scrape_collection_by_year(page=mock_page, year=2026, done_links=set())
 
-    assert resultado == 3
+    assert len(resultado) == 3
     mocks["go_next_page"].assert_not_called()  # parou por duplicado, nunca tentou próxima página
 
 
 @pytest.mark.asyncio
 async def test_scrape_collection_by_year_para_quando_go_next_page_devolve_false(monkeypatch, mock_page):
+    async def fake_scrape(page, year, done_links, batch, items_skipped, page_count, force_full):
+        for i in range(5):
+            batch[f"link_{i}"] = {"dados": "teste"}
+        return 5, 0, False
+
     mocks = _mock_all_steps(
         monkeypatch,
-        scrape_items_from_page=AsyncMock(return_value=(5, 0, False)),
+        scrape_items_from_page=AsyncMock(side_effect=fake_scrape),
         go_next_page=AsyncMock(return_value=False),
     )
-
     resultado = await scraper.scrape_collection_by_year(page=mock_page, year=2026, done_links=set())
 
-    assert resultado == 5
+    assert len(resultado) == 5
     assert mocks["scrape_items_from_page"].call_count == 1  # só correu uma vez, depois parou
-
-
-@pytest.mark.asyncio
-async def test_scrape_collection_by_year_grava_batch_quando_atinge_batch_size(monkeypatch, mock_page):
-    """Confirma save_to_rotating_file é chamado quando len(batch) >= BATCH_SIZE."""
-    original_batch_size = scraper.BATCH_SIZE
-    monkeypatch.setattr(scraper, "BATCH_SIZE", 2)
-
-    def fake_scrape_items(page, year, done_links, batch, items_skipped, page_count, force_full):
-        # simula adicionar itens directamente ao batch (mutado in place, como a função real faz)
-        batch[f"https://x/{page_count}-a"] = {"titulo": "a"}
-        batch[f"https://x/{page_count}-b"] = {"titulo": "b"}
-        return 2, items_skipped, False
-
-    async def async_fake_scrape_items(*args, **kwargs):
-        return fake_scrape_items(*args, **kwargs)
-
-    mocks = _mock_all_steps(
-        monkeypatch,
-        scrape_items_from_page=AsyncMock(side_effect=async_fake_scrape_items),
-        go_next_page=AsyncMock(return_value=False),
-    )
-
-    resultado = await scraper.scrape_collection_by_year(page=mock_page, year=2026, done_links=set())
-
-    assert resultado == 2
-    mocks["save_to_rotating_file"].assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_scrape_collection_by_year_grava_batch_remanescente_no_final(monkeypatch, mock_page):
-    """Confirma que itens que não chegaram a BATCH_SIZE são gravados no fim (fora do loop)."""
-    monkeypatch.setattr(scraper, "BATCH_SIZE", 1000)  # nunca atinge dentro do loop
-
-    def fake_scrape_items(page, year, done_links, batch, items_skipped, page_count, force_full):
+    async def async_fake_scrape_items(page, year, done_links, batch, items_skipped, page_count, force_full):
         batch["https://x/1"] = {"titulo": "único item"}
         return 1, items_skipped, False
-
-    async def async_fake_scrape_items(*args, **kwargs):
-        return fake_scrape_items(*args, **kwargs)
 
     mocks = _mock_all_steps(
         monkeypatch,
@@ -742,16 +849,13 @@ async def test_scrape_collection_by_year_grava_batch_remanescente_no_final(monke
 
     resultado = await scraper.scrape_collection_by_year(page=mock_page, year=2026, done_links=set())
 
-    assert resultado == 1
-    mocks["save_to_rotating_file"].assert_called_once()
-    chamada_args = mocks["save_to_rotating_file"].call_args[0][0]
-    assert "https://x/1" in chamada_args
+    assert len(resultado) == 1
+    assert "https://x/1" in resultado
+    assert resultado["https://x/1"]["titulo"] == "único item"
 
 
 @pytest.mark.asyncio
 async def test_scrape_collection_by_year_done_links_atualizado_apos_grava_batch(monkeypatch, mock_page):
-    monkeypatch.setattr(scraper, "BATCH_SIZE", 1)
-
     def fake_scrape_items(page, year, done_links, batch, items_skipped, page_count, force_full):
         batch["https://x/1"] = {"titulo": "item"}
         return 1, items_skipped, False
@@ -769,3 +873,104 @@ async def test_scrape_collection_by_year_done_links_atualizado_apos_grava_batch(
     await scraper.scrape_collection_by_year(page=mock_page, year=2026, done_links=done_links)
 
     assert "https://x/1" in done_links
+
+
+def _fake_playwright(mock_page, mock_browser=None):
+    """Helper que cria um contexto playwright falso."""
+    if mock_browser is None:
+        mock_browser = AsyncMock()
+    mock_browser.new_page.return_value = mock_page
+
+    mock_chromium = AsyncMock()
+    mock_chromium.launch.return_value = mock_browser
+
+    mock_playwright_instance = AsyncMock()
+    mock_playwright_instance.chromium = mock_chromium
+
+    mock_playwright_cm = AsyncMock()
+    mock_playwright_cm.__aenter__.return_value = mock_playwright_instance
+
+    return mock_playwright_cm, mock_browser
+
+
+@pytest.mark.asyncio
+async def test_scrape_with_year_filter_sucesso(monkeypatch):
+    mock_page = AsyncMock()
+    mock_playwright_cm, mock_browser = _fake_playwright(mock_page)
+
+    monkeypatch.setattr(scraper, "async_playwright", lambda: mock_playwright_cm)
+    monkeypatch.setattr(scraper, "scrape_collection_by_year", AsyncMock(return_value=42))
+
+    resultado = await scraper.scrape_with_year_filter(2026, done_links=set())
+
+    assert resultado == 42
+
+
+@pytest.mark.asyncio
+async def test_scrape_with_year_filter_fecha_browser_em_sucesso(monkeypatch):
+    mock_page = AsyncMock()
+    mock_playwright_cm, mock_browser = _fake_playwright(mock_page)
+
+    monkeypatch.setattr(scraper, "async_playwright", lambda: mock_playwright_cm)
+    monkeypatch.setattr(scraper, "scrape_collection_by_year", AsyncMock(return_value=10))
+
+    await scraper.scrape_with_year_filter(2026, done_links=set())
+
+    mock_browser.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_scrape_with_year_filter_fecha_browser_em_erro(monkeypatch):
+    mock_page = AsyncMock()
+    mock_playwright_cm, mock_browser = _fake_playwright(mock_page)
+
+    monkeypatch.setattr(scraper, "async_playwright", lambda: mock_playwright_cm)
+    monkeypatch.setattr(scraper, "scrape_collection_by_year", AsyncMock(side_effect=Exception("falha")))
+
+    resultado = await scraper.scrape_with_year_filter(2026, done_links=set())
+
+    assert resultado == 0               #
+    mock_browser.close.assert_called_once()  
+
+
+@pytest.mark.asyncio
+async def test_scrape_with_year_filter_passa_argumentos_correctos(monkeypatch):
+    mock_page = AsyncMock()
+    mock_playwright_cm, _ = _fake_playwright(mock_page)
+
+    mock_scrape = AsyncMock(return_value=5)
+    monkeypatch.setattr(scraper, "async_playwright", lambda: mock_playwright_cm)
+    monkeypatch.setattr(scraper, "scrape_collection_by_year", mock_scrape)
+
+    done_links = {"http://x.com/1"}
+    await scraper.scrape_with_year_filter(2026, done_links=done_links, force_full=True)
+
+    mock_scrape.assert_called_once_with(mock_page, 2026, done_links, force_full=True)
+
+
+@pytest.mark.asyncio
+async def test_scrape_with_year_filter_zero_itens(monkeypatch):
+    mock_page = AsyncMock()
+    mock_playwright_cm, _ = _fake_playwright(mock_page)
+
+    monkeypatch.setattr(scraper, "async_playwright", lambda: mock_playwright_cm)
+    monkeypatch.setattr(scraper, "scrape_collection_by_year", AsyncMock(return_value=0))
+
+    resultado = await scraper.scrape_with_year_filter(2026, done_links=set())
+
+    assert resultado == 0
+
+
+@pytest.mark.asyncio
+async def test_scrape_with_year_filter_viewport_correcto(monkeypatch):
+    mock_page = AsyncMock()
+    mock_browser = AsyncMock()
+    mock_browser.new_page.return_value = mock_page
+    mock_playwright_cm, _ = _fake_playwright(mock_page, mock_browser)
+
+    monkeypatch.setattr(scraper, "async_playwright", lambda: mock_playwright_cm)
+    monkeypatch.setattr(scraper, "scrape_collection_by_year", AsyncMock(return_value=1))
+
+    await scraper.scrape_with_year_filter(2026, done_links=set())
+
+    mock_browser.new_page.assert_called_once_with(viewport={"width": 1280, "height": 720})
