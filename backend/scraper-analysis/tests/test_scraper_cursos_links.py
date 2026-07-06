@@ -6,7 +6,7 @@ import scraper_cursos_links as scraper
 from urllib.error import HTTPError
 import time
 
-def test_parse_page_item_valido():
+def test_parse_curso_page_item_valido():
     html = """
         <div class="view-content-wrap">
         <div class="item">
@@ -15,14 +15,14 @@ def test_parse_page_item_valido():
         </div>
     </div>
     """
-    resultado = scraper.parse_page(html)
+    resultado = scraper.parse_curso_page(html)
     link = "https://www.ipl.pt/licenciaturas/leic"
     assert link in resultado
     assert resultado[link]["curso"] == "LEIC"
     assert resultado[link]["escola"] == "ISEL"
     assert resultado[link]["tipoCurso"] == "Licenciatura"
 
-def test_parse_page_item_sem_elemento_titulo():
+def test_parse_curso_page_item_sem_elemento_titulo():
     html = """
         <div class="view-content-wrap">
         <div class="item">
@@ -30,10 +30,10 @@ def test_parse_page_item_sem_elemento_titulo():
         </div>
     </div>
     """
-    resultado = scraper.parse_page(html)
+    resultado = scraper.parse_curso_page(html)
     assert resultado == {}
 
-def test_parse_page_item_sem_titulo():
+def test_parse_curso_page_item_sem_titulo():
     html = """
         <div class="view-content-wrap">
         <div class="item">
@@ -42,10 +42,10 @@ def test_parse_page_item_sem_titulo():
         </div>
     </div>
     """
-    resultado = scraper.parse_page(html)
+    resultado = scraper.parse_curso_page(html)
     assert resultado == {}
 
-def test_parse_page_item_sem_href():
+def test_parse_curso_page_item_sem_href():
     html = """
         <div class="view-content-wrap">
         <div class="item">
@@ -54,11 +54,11 @@ def test_parse_page_item_sem_href():
         </div>
     </div>
     """
-    resultado = scraper.parse_page(html)
+    resultado = scraper.parse_curso_page(html)
     assert resultado == {}
 
-def test_parse_page_html_vazio():
-    assert scraper.parse_page("") == {}
+def test_parse_curso_page_html_vazio():
+    assert scraper.parse_curso_page("") == {}
 
 def test_scrape_cursos_force_full_apaga_ficheiro(tmp_path, monkeypatch):
     ficheiro = tmp_path / "file.json"

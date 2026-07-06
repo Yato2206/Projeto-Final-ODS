@@ -6,7 +6,7 @@ import scraper_newsletter_all as scraper
 from urllib.error import HTTPError
 import time
 
-def test_parse_page_item_valido():
+def test_parse_newsletter_page_item_valido():
     html = """
         <div class="view-content-wrap">
         <div class="item">
@@ -15,12 +15,12 @@ def test_parse_page_item_valido():
         </div>
     </div>
     """
-    resultado = scraper.parse_page(html)
+    resultado = scraper.parse_newsletter_page(html)
     assert "Notícias Politécnico de Lisboa #123" in resultado
     assert resultado["Notícias Politécnico de Lisboa #123"]["link"] == "https://www.ipl.pt/newsletter/123"
     assert resultado["Notícias Politécnico de Lisboa #123"]["dataPublicacao"] == "2026-06-20"
 
-def test_parse_page_item_sem_elemento_titulo():
+def test_parse_newsletter_page_item_sem_elemento_titulo():
     html = """
         <div class="view-content-wrap">
         <div class="item">
@@ -28,10 +28,10 @@ def test_parse_page_item_sem_elemento_titulo():
         </div>
     </div>
     """
-    resultado = scraper.parse_page(html)
+    resultado = scraper.parse_newsletter_page(html)
     assert resultado == {}
 
-def test_parse_page_item_sem_titulo():
+def test_parse_newsletter_page_item_sem_titulo():
     html = """
         <div class="view-content-wrap">
         <div class="item">
@@ -40,10 +40,10 @@ def test_parse_page_item_sem_titulo():
         </div>
     </div>
     """
-    resultado = scraper.parse_page(html)
+    resultado = scraper.parse_newsletter_page(html)
     assert resultado == {}
 
-def test_parse_page_item_sem_href():
+def test_parse_newsletter_page_item_sem_href():
     html = """
         <div class="view-content-wrap">
         <div class="item">
@@ -52,11 +52,11 @@ def test_parse_page_item_sem_href():
         </div>
     </div>
     """
-    resultado = scraper.parse_page(html)
+    resultado = scraper.parse_newsletter_page(html)
     assert resultado == {}
 
-def test_parse_page_html_vazio():
-    assert scraper.parse_page("") == {}
+def test_parse_newsletter_page_html_vazio():
+    assert scraper.parse_newsletter_page("") == {}
 
 def test_scrape_newsletters_force_full_apaga_ficheiro(tmp_path, monkeypatch):
     ficheiro = tmp_path / "file.json"
