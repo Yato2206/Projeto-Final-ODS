@@ -3,232 +3,180 @@ import asyncio
 import pytest
 from pathlib import Path
 import json
-import scraper_newsletter_each as scraper
+import scraper_cursos_texto as scraper
 from urllib.error import HTTPError
 from datetime import datetime
 
-def test_extract_newsletter_id():
-    url = "https://www.ipl.pt/newsletter/123"
-    newsletter_id = scraper.extract_newsletter_id(url)
-    assert newsletter_id == "123"
+def test_parse_content_sucesso():
+        html = """
+        <html>
+          <body>
+            <div class="node__content clearfix">
+              <div class="field--name-body">
+                <p>Linha 1</p>
+                <p>Linha 2</p>
+              </div>
+            </div>
+          </body>
+        </html>
+        """
+        result = scraper.parse_curso_content(
+            html,
+            "Licenciatura em Informática",
+            "Licenciatura",
+            "Escola Superior de Tecnologia",
+            "https://exemplo.pt/curso/1",
+        )
+ 
+        assert result is not None
+        assert result["curso"] == "Licenciatura em Informática"
+        assert result["link"] == "https://exemplo.pt/curso/1"
+        assert result["escola"] == "Escola Superior de Tecnologia"
+        assert result["tipoCurso"] == "Licenciatura"
+        assert "Linha 1" in result["texto"]
+        assert "Linha 2" in result["texto"]
+        datetime.fromisoformat(result["dateChecked"])
+ 
+def test_parse_content_sem_node_content():
+    html = "<html><body><div class='outra-classe'>Texto</div></body></html>"
+    result = scraper.parse_curso_content(html, "curso", "tipo", "escola", "link")
+    assert result is None
 
-def test_extract_newsletter_id_url_sem_id():
-    url = "https://www.ipl.pt/newsletter/"
-    newsletter_id = scraper.extract_newsletter_id(url)
-    assert newsletter_id == "unknown"
-    url2 = "https://www.ipl.pt/newsletter"
-    newsletter_id2 = scraper.extract_newsletter_id(url2)
-    assert newsletter_id2 == "unknown"
-
-def test_parse_newsletter_content_normaliza_espacos_e_pontuacao():
+def test_parse_content_sem_field_body():
     html = """
-    <div class="content-main">
-        <div class="title-body">
-            <h1>Título   com\xa0espaços   estranhos</h1>
-            <p>Texto com   espaço extra , e pontuação   .</p>
+    <html>
+        <body>
+        <div class="node__content clearfix">
+            <div class="outra-coisa">Texto</div>
+        </div>
+        </body>
+    </html>
+    """
+    result = scraper.parse_curso_content(html, "curso", "tipo", "escola", "link")
+    assert result is None
+
+def test_parse_content_campo_texto_vazio():
+    html = """
+    <html>
+        <body>
+            <div class="node__content clearfix">
+                <div class="field--name-body"></div>
+            </div>
+        </body>
+    </html>
+    """
+    resultado = scraper.parse_curso_content(html, "curso", "tipo", "escola", "link")
+
+    assert resultado is not None   # field--name-body existe, não devolve None
+    assert resultado["texto"] == ""
+
+def test_parse_content_html_vazio():
+    result = scraper.parse_curso_content("", "curso", "tipo", "escola", "link")
+    assert result is None
+
+def test_parse_content_preserva_quebras_linha():
+    html = """
+    <div class="node__content clearfix">
+        <div class="field--name-body">
+        <p>Primeiro parágrafo</p>
+        <p>Segundo parágrafo</p>
         </div>
     </div>
     """
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/noticia/1")
-
-    assert resultado["politecnicoTitulo"] == "Título com espaços estranhos"
-    assert resultado["politecnicoTexto"] == "Texto com espaço extra, e pontuação."
-
-def test_parse_newsletter_content_normaliza_parenteses():
-    html = """
-    <div class="content-main">
-        <div class="title-body">
-            <h1>Título</h1>
-            <p>Texto ( com espaço a mais )</p>
-        </div>
-    </div>
-    """
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-    assert resultado["politecnicoTexto"] == "Texto (com espaço a mais)"
-
-def test_parse_newsletter_content_sem_content_main():
-    html = "<html><body>Sem content-main</body></html>"
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-    assert resultado is None
-
-def test_parse_newsletter_content_sem_title_body():
-    html = '<div class="content-main"><p>conteudo solto</p></div>'
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-    assert resultado is not None
-    assert resultado["politecnicoTitulo"] == ""
-    assert resultado["politecnicoTexto"] == ""
-
-def test_parse_newsletter_content_sem_h1():
-    html = """
-    <div class="content-main">
-        <div class="title-body">
-            <p>Só texto, sem h1</p>
-        </div>
-    </div>
-    """
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-    assert resultado["politecnicoTitulo"] == ""
-    assert resultado["politecnicoTexto"] == "Só texto, sem h1"
-
-def test_parse_newsletter_content_multiplos_paragrafos_intro():
-    html = """
-    <div class="content-main">
-        <div class="title-body">
-            <h1>Título</h1>
-            <p>Parágrafo um.</p>
-            <p>Parágrafo dois.</p>
-            <p></p>
-        </div>
-    </div>
-    """
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-    assert resultado["politecnicoTexto"] == "Parágrafo um. Parágrafo dois."
-
-def test_parse_newsletter_content_campo_aberto_multiplas_noticias():
-    html = """
-    <div class="content-main">
-        <div class="title-body"><h1>T</h1></div>
-        <div class="field--name-field-campo-aberto-grupo-3">
-            <h2>Notícia 1</h2>
-            <p>Texto da notícia 1.</p>
-            <p>Continuação da notícia 1.</p>
-            <h2>Notícia 2</h2>
-            <p>Texto da notícia 2.</p>
-        </div>
-    </div>
-    """
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-
-    assert len(resultado["noticias"]) == 2
-    assert resultado["noticias"][0]["titulo"] == "Notícia 1"
-    assert resultado["noticias"][0]["texto"] == "Texto da notícia 1. Continuação da notícia 1."
-    assert resultado["noticias"][1]["titulo"] == "Notícia 2"
-    assert resultado["noticias"][1]["texto"] == "Texto da notícia 2."
-
-
-def test_parse_newsletter_content_campo_aberto_h2_sem_paragrafos():
-    html = """
-    <div class="content-main">
-        <div class="title-body"><h1>T</h1></div>
-        <div class="field--name-field-campo-aberto-grupo-3">
-            <h2>Notícia Vazia</h2>
-            <h2>Notícia 2</h2>
-            <p>Texto.</p>
-        </div>
-    </div>
-    """
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-
-    assert resultado["noticias"][0]["titulo"] == "Notícia Vazia"
-    assert resultado["noticias"][0]["texto"] == ""
-
-def test_parse_newsletter_content_campo_aberto_ausente():
-    html = """
-    <div class="content-main">
-        <div class="title-body"><h1>T</h1></div>
-    </div>
-    """
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-    assert resultado["noticias"] == []
-
-def test_parse_newsletter_content_campo_aberto_para_em_elemento_nao_h2_nem_p():
-    html = """
-    <div class="content-main">
-        <div class="title-body"><h1>T</h1></div>
-        <div class="field--name-field-campo-aberto-grupo-3">
-            <h2>Notícia 1</h2>
-            <p>Texto válido.</p>
-            <div>Bloco estranho, não é p nem h2</div>
-            <p>Este ainda deve contar.</p>
-            <h2>Notícia 2</h2>
-        </div>
-    </div>
-    """
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-    assert resultado["noticias"][0]["texto"] == "Texto válido. Este ainda deve contar."
-
-def test_parse_newsletter_content_campos_basicos_no_resultado():
-    html = '<div class="content-main"><div class="title-body"><h1>T</h1></div></div>'
-    resultado = scraper.parse_newsletter_content(html, "42", "2026-01-01", "/link/42")
-
-    assert resultado["titulo"] == "Newsletter: 42"
-    assert resultado["link"] == "/link/42"
-    assert resultado["dataPublicacao"] == "2026-01-01"
-    assert resultado["tipo"] == "Newsletter"
-    assert "dateChecked" in resultado
-
-def test_parse_newsletter_content_date_checked_e_iso_valido():
-    html = '<div class="content-main"><div class="title-body"><h1>T</h1></div></div>'
-    resultado = scraper.parse_newsletter_content(html, "1", "2026-06-20", "/x")
-    datetime.fromisoformat(resultado["dateChecked"])
-
-def test_parse_newsletter_content():
-    Base_path = Path(__file__).parent
-    html = (Base_path / "test_data/newsletter_sample.html").read_text(encoding="utf-8")
-    newsletter_id = "123"
-    data_publicacao = "2026-06-20"
-    link = "https://www.ipl.pt/newsletter/123"
-
-    resultado = scraper.parse_newsletter_content(html, newsletter_id, data_publicacao, link)
-
-    assert resultado is not None
-    assert resultado["titulo"] == f"Newsletter: {newsletter_id}"
-    assert resultado["dataPublicacao"] == data_publicacao
-    assert resultado["link"] == link
-    assert resultado["tipo"] == "Newsletter"
-    assert "politecnicoTitulo" in resultado
-    assert "politecnicoTexto" in resultado
-    assert "dateChecked" in resultado
-    assert isinstance(resultado["noticias"], list)
-    assert len(resultado["noticias"]) > 0
+    result = scraper.parse_curso_content(html, "curso", "tipo", "escola", "link")
+    assert "\n" in result["texto"]
 
 @pytest.mark.asyncio
-async def test_scrape_newsletter(monkeypatch):
-    semaphore = asyncio.Semaphore(1)
-    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html>...</html>"))
-    monkeypatch.setattr(scraper, "extract_newsletter_id", lambda url: "123")
-    monkeypatch.setattr(scraper, "parse_newsletter_content", lambda html, id, data, url: {
-        "titulo": "Notícia Nova", "link": url
-    })
-
-    link_info = {"link": "/noticia/123", "dataPublicacao": "2026-06-20"}
-    resultado = await scraper.scrape_newsletter(None, link_info, {}, semaphore)
-
-    assert resultado is not None
-    titulo, content = resultado
-    assert titulo == "Notícia Nova"
-
-@pytest.mark.asyncio
-async def test_scrape_newsletter_item_ja_existente_devolve_none(monkeypatch):
-    semaphore = asyncio.Semaphore(1)
-    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html>...</html>"))
-    monkeypatch.setattr(scraper, "extract_newsletter_id", lambda url: "123")
-    monkeypatch.setattr(scraper, "parse_newsletter_content", lambda html, id, data, url: {
-        "titulo": "Já Existe", "link": url
-    })
-
-    link_info = {"link": "/noticia/123"}
-    existing_data = {"Já Existe": {}}
-
-    resultado = await scraper.scrape_newsletter(None, link_info, existing_data, semaphore)
-    assert resultado is None
-
-@pytest.mark.asyncio
-async def test_scrape_newsletter_fetch_falha_devolve_none(monkeypatch):
-    semaphore = asyncio.Semaphore(1)
+async def test_scrape_cursos_fetch_falha(monkeypatch):
     monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value=None))
 
-    link_info = {"link": "/noticia/x"}
-    resultado = await scraper.scrape_newsletter(None, link_info, {}, semaphore)
+    link_info = {"link": "http://x.com/curso", "curso": "Engenharia", "tipoCurso": "Licenciatura", "escola": "1"}
+    resultado = await scraper.scrape_cursos(None, link_info, {}, None)
+
     assert resultado is None
+
 
 @pytest.mark.asyncio
-async def test_scrape_newsletter_parse_content_devolve_none(monkeypatch):
-    semaphore = asyncio.Semaphore(1)
+async def test_scrape_cursos_parse_devolve_none(monkeypatch):
     monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
-    monkeypatch.setattr(scraper, "extract_newsletter_id", lambda url: "123")
-    monkeypatch.setattr(scraper, "parse_newsletter_content", lambda html, id, data, url: None)
+    monkeypatch.setattr(scraper, "parse_curso_content", lambda html, curso, tipoCurso, escola, url: None)
 
-    link_info = {"link": "/noticia/x"}
-    resultado = await scraper.scrape_newsletter(None, link_info, {}, semaphore)
+    link_info = {"link": "http://x.com/curso", "curso": "Engenharia", "tipoCurso": "Licenciatura", "escola": "1"}
+    resultado = await scraper.scrape_cursos(None, link_info, {}, None)
+
     assert resultado is None
+
+
+@pytest.mark.asyncio
+async def test_scrape_cursos_sucesso(monkeypatch):
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "parse_curso_content", lambda html, curso, tipoCurso, escola, url: {
+        "link": "http://x.com/curso",
+        "curso": "Engenharia",
+        "tipoCurso": "Licenciatura",
+    })
+
+    link_info = {"link": "http://x.com/curso", "curso": "Engenharia", "tipoCurso": "Licenciatura", "escola": "1"}
+    resultado = await scraper.scrape_cursos(None, link_info, {}, None)
+
+    assert resultado is not None
+    curso, content = resultado
+    assert curso == "http://x.com/curso"
+    assert content["curso"] == "Engenharia"
+
+
+@pytest.mark.asyncio
+async def test_scrape_cursos_ja_existe_em_existing_data(monkeypatch):
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "parse_curso_content", lambda html, curso, tipoCurso, escola, url: {
+        "link": "http://x.com/curso",
+        "curso": "Engenharia",
+    })
+
+    link_info = {"link": "http://x.com/curso", "curso": "Engenharia", "tipoCurso": "Licenciatura", "escola": "1"}
+    existing_data = {"http://x.com/curso": {}} 
+
+    resultado = await scraper.scrape_cursos(None, link_info, existing_data, None)
+
+    assert resultado is None
+
+
+@pytest.mark.asyncio
+async def test_scrape_cursos_campos_em_falta_em_link_info(monkeypatch):
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
+
+    chamadas = {}
+    def fake_parse(html, curso, tipoCurso, escola, url):
+        chamadas["curso"] = curso
+        chamadas["tipoCurso"] = tipoCurso
+        chamadas["escola"] = escola
+        return None
+
+    monkeypatch.setattr(scraper, "parse_curso_content", fake_parse)
+
+    link_info = {"link": "http://x.com/curso"} 
+    await scraper.scrape_cursos(None, link_info, {}, None)
+
+    assert chamadas["curso"] == ""
+    assert chamadas["tipoCurso"] == ""
+    assert chamadas["escola"] == ""
+
+
+@pytest.mark.asyncio
+async def test_scrape_cursos_usa_link_do_content_como_chave(monkeypatch):
+    """
+    Confirma que a chave devolvida é content["link"], não link_info["link"]
+    — podem ser diferentes se parse_content normalizar o URL.
+    """
+    monkeypatch.setattr(scraper, "fetch_async", AsyncMock(return_value="<html></html>"))
+    monkeypatch.setattr(scraper, "parse_curso_content", lambda html, curso, tipoCurso, escola, url: {
+        "link": "http://x.com/curso-normalizado", 
+        "curso": "Engenharia",
+    })
+
+    link_info = {"link": "http://x.com/curso-original", "curso": "Engenharia", "tipoCurso": "", "escola": "1"}
+    resultado = await scraper.scrape_cursos(None, link_info, {}, None)
+
+    assert resultado is not None
+    chave, _ = resultado
+    assert chave == "http://x.com/curso-normalizado"

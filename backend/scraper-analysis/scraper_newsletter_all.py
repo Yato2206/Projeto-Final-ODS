@@ -14,7 +14,7 @@ OUTPUT_FILE = "documents/newsletter/newsletter_links.json"
 RETRIES = 3
 MIN_ITEMS_PER_PAGE = 10
 
-def parse_page(html):
+def parse_newsletter_page(html):
     """Parse page and extract newsletter items"""
     soup = BeautifulSoup(html, 'html.parser')
     items = soup.select(".view-content-wrap .item")
@@ -58,7 +58,7 @@ def scrape_newsletters(force_full=False):
 
     all_news = {} if force_full else dict(existing_data)
 
-    _scrape_sequential(BASE_URL, parse_page, 0, existing_data, all_news, MIN_ITEMS_PER_PAGE)
+    _scrape_sequential(BASE_URL, parse_newsletter_page, 0, existing_data, all_news, MIN_ITEMS_PER_PAGE)
 
     sort_key = "dataPublicacao"
     save_data(all_news, sort_key, OUTPUT_FILE)

@@ -300,7 +300,7 @@ def main():
     # Format documents from each source
     newsletter_docs = format_newsletter_documents()
     repo_docs = format_scientific_repo_documents()
-    api_docs = load_formatted_documents_from_directory(SCRIPT_DIR / "apis" / "documents", "Scopus API")
+    api_docs = load_formatted_documents_from_directory(DOCUMENTS_DIR / "scopus", "Scopus")
     cursos = format_cursos()
     all_docs = merge_and_save(newsletter_docs, repo_docs, api_docs, cursos)
 

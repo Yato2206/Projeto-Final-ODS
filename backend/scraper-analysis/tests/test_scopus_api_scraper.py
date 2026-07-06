@@ -39,7 +39,7 @@ def test_processar_ano_conteudo_ficheiro(tmp_path):
 
         scraper.processar_ano(2026, 7, str(tmp_path))
 
-        ficheiro = Path(tmp_path) / "scopus_2026_001.json"
+        ficheiro = Path(tmp_path) / "scopus_2026.json"
         data = json.loads(ficheiro.read_text(encoding="utf-8"))
         assert len(data) == 1
         assert "https://www.scopus.com/pages/publications/2-s2.0-12345" in data
@@ -60,7 +60,7 @@ def test_processar_ano_skip_no_eid(tmp_path):
 
         scraper.processar_ano(2026, 7, str(tmp_path))
 
-        ficheiro = Path(tmp_path) / "scopus_2026_001.json"
+        ficheiro = Path(tmp_path) / "scopus_2026.json"
         data = json.loads(ficheiro.read_text(encoding="utf-8"))
         assert len(data) == 1
 
@@ -79,73 +79,9 @@ def test_processar_ano_skip_no_description(tmp_path):
 
         scraper.processar_ano(2026, 7, str(tmp_path))
 
-        ficheiro = Path(tmp_path) / "scopus_2026_001.json"
+        ficheiro = Path(tmp_path) / "scopus_2026.json"
         data = json.loads(ficheiro.read_text(encoding="utf-8"))
         assert len(data) == 1
-#===================================================================================
-# TESTES DE BATCHING
-#===================================================================================
-
-def test_processar_ano_max_batch_size(tmp_path):
-    with patch('scopus_api_scraper.ScopusSearch') as mock_search:
-        mock_docs = []
-        for i in range(1000): # Create 1000 mock documents
-            mock_doc = MagicMock()
-            mock_doc._asdict.return_value = {
-                "eid": f"2-s2.0-{i}",
-                "description": f"Description {i}",
-            }
-            mock_docs.append(mock_doc)
-        mock_search.return_value.results = mock_docs
-        scraper.processar_ano(2026, 7, str(tmp_path))
-        ficheiro1 = Path(tmp_path) / "scopus_2026_001.json"
-        assert ficheiro1.exists()
-        data1 = json.loads(ficheiro1.read_text(encoding="utf-8"))
-        assert len(data1) == 1000
-
-def test_processar_ano_above_max_batch_size(tmp_path):
-    with patch('scopus_api_scraper.ScopusSearch') as mock_search:
-        mock_docs = []
-        for i in range(1001): # Create 1001 mock documents
-            mock_doc = MagicMock()
-            mock_doc._asdict.return_value = {
-                "eid": f"2-s2.0-{i}",
-                "description": f"Description {i}",
-            }
-            mock_docs.append(mock_doc)
-        mock_search.return_value.results = mock_docs
-        scraper.processar_ano(2026, 7, str(tmp_path))
-        ficheiro1 = Path(tmp_path) / "scopus_2026_001.json"
-        fichero2 = Path(tmp_path) / "scopus_2026_002.json"
-        assert ficheiro1.exists()
-        assert fichero2.exists()
-        data1 = json.loads(ficheiro1.read_text(encoding="utf-8"))
-        data2 = json.loads(fichero2.read_text(encoding="utf-8"))
-        assert len(data1) == 1000
-        assert len(data2) == 1
-
-def test_processar_ano_two_max_batch_size_files(tmp_path):
-    with patch('scopus_api_scraper.ScopusSearch') as mock_search:
-        mock_docs = []
-        for i in range(2000): # Create 2000 mock documents
-            mock_doc = MagicMock()
-            mock_doc._asdict.return_value = {
-                "eid": f"2-s2.0-{i}",
-                "description": f"Description {i}",
-            }
-            mock_docs.append(mock_doc)
-        mock_search.return_value.results = mock_docs
-        scraper.processar_ano(2026, 7, str(tmp_path))
-        ficheiro1 = Path(tmp_path) / "scopus_2026_001.json"
-        fichero2 = Path(tmp_path) / "scopus_2026_002.json"
-        ficheiro3 = Path(tmp_path) / "scopus_2026_003.json"
-        assert ficheiro1.exists()
-        assert fichero2.exists()
-        assert not ficheiro3.exists()
-        data1 = json.loads(ficheiro1.read_text(encoding="utf-8"))
-        data2 = json.loads(fichero2.read_text(encoding="utf-8"))
-        assert len(data1) == 1000
-        assert len(data2) == 1000
 
 #===================================================================================
 # TESTES DA CACHE

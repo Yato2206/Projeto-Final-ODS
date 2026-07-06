@@ -19,8 +19,8 @@ NUM_SCRAPERS = 5
 
 #semaphore = asyncio.Semaphore(CONCURRENT_REQUESTS)
 
-def parse_content(html, curso, tipoCurso, escola, link):
-    """Parse newsletter HTML and extract content"""
+def parse_curso_content(html, curso, tipoCurso, escola, link):
+    """Parse curso HTML and extract content"""
     soup = BeautifulSoup(html, 'html.parser')
 
     content_main = soup.select_one(".node__content.clearfix")
@@ -50,7 +50,7 @@ async def scrape_cursos(session, link_info, existing_data, semaphore):
     if not html:
         return None
 
-    content = parse_content(html, curso, tipoCurso, escola, url)
+    content = parse_curso_content(html, curso, tipoCurso, escola, url)
     if content:
         curso = content["link"]
         if curso not in existing_data:

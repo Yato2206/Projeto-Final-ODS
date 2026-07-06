@@ -14,7 +14,7 @@ OUTPUT_FILE = "documents/cursos/cursos_links.json"
 RETRIES = 3
 MIN_ITEMS_PER_PAGE = 12
 
-def parse_page(html):
+def parse_curso_page(html):
     """Parse page and extract cursos items"""
     soup = BeautifulSoup(html, 'html.parser')
     items = soup.select(".view-content-wrap .item")
@@ -89,7 +89,7 @@ def scrape_cursos(force_full=False):
     all_cursos = {} if force_full else dict(existing_data)
 
     for curso in ["licenciaturas", "mestrados", "pos-graduacoes"]:
-        _scrape_sequential(BASE_URL, parse_page, 0, existing_data, all_cursos, MIN_ITEMS_PER_PAGE, curso, prefix=f"[{curso.capitalize()}]")
+        _scrape_sequential(BASE_URL, parse_curso_page, 0, existing_data, all_cursos, MIN_ITEMS_PER_PAGE, curso, prefix=f"[{curso.capitalize()}]")
 
     sort_key = "dateChecked"
     save_data(all_cursos, sort_key, OUTPUT_FILE)
