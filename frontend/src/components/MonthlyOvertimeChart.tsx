@@ -1,5 +1,6 @@
 import React from 'react';
-import {BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList} from 'recharts';
+import { COLORS , sortOdsNumerically} from "./Utilis";
 
 type MonthlyData = {
     month: string;
@@ -13,20 +14,25 @@ interface MonthlyOvertimeChartComponentProps {
     relevantOds: string[];
 }
 
-const COLORS = [
-    '#E5243B', '#DDA63A', '#4C9F38', '#C7212F', '#FF3A21',
-    '#26BDE2', '#FCC30B', '#A21942', '#FD6925', '#DD1367',
-    '#FD9D24', '#C9992D', '#3F7E44', '#0A97D9', '#56C02B',
-    '#00689D', '#19486A'
-];
-
-const sortOdsNumerically = (odsArray: string[]): string[] => {
-    return [...odsArray].sort((a, b) => {
-        const numA = parseInt(a.match(/\d+/)?.[0] || '0');
-        const numB = parseInt(b.match(/\d+/)?.[0] || '0');
-        return numA - numB;
-    });
-};
+const CustomTooltip = ({active, payload, label, sortedOds}: any) => {
+    if (active && payload && payload.length) {
+        const payloadMap = new Map(payload.map((p: any) => [p.dataKey, p]));
+        return (
+            <div className={"custom-tooltip"}>
+                <p style={{ fontWeight: 'bold', marginBottom: '6px' }}>{label}</p>
+                {sortedOds.map((ods: string) => {
+                    const entry = payloadMap.get(ods);
+                    if (!entry) return null;
+                    return (
+                        <p key={ods} style={{ color: entry.color, margin: '2px 0' }}>
+                            {ods}: {entry.value}
+                        </p>
+                    );
+                })}
+            </div>
+        )
+    }
+}
 
 const renderCustomLegend = (sortedOds: string[]) => {
     return (
@@ -62,12 +68,12 @@ const MonthlyOvertimeChartComponent: React.FC<MonthlyOvertimeChartComponentProps
     const sortedOds = sortOdsNumerically(relevantOds);
 
     return (
-        <ResponsiveContainer width="100%" height={700}>
+        <ResponsiveContainer width="100%" height={600}>
             <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month"/>
                 <YAxis />
-                <Tooltip />
+                <Tooltip content={<CustomTooltip sortedOds={sortedOds} />} wrapperStyle={{ zIndex: 1000 }} />
                 <Legend content={() => renderCustomLegend(sortedOds)} />
                 {sortedOds.map((ods, index) => {
                     const isLast = index === sortedOds.length - 1;

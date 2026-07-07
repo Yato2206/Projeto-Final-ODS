@@ -38,13 +38,23 @@ export const availableOrigens: Origens[] = ["Repositório Científico", "Newslet
 
 export const availableTaxonomias: Taxonomias[] = [
     "Universidade de Auckland",
-    "Universidade de Educação de Hong Kong"
+    "Universidade de Educação de Hong Kong",
+    "Universidade de Monash"
 ];
 
 export const taxonomia_names: Record<Taxonomias, string> = {
     "Universidade de Auckland": "UoA",
-    "Universidade de Educação de Hong Kong": "HK"
+    "Universidade de Educação de Hong Kong": "HK",
+    "Universidade de Monash": "Msh",
 };
+
+
+export const COLORS = [
+    '#E5243B', '#DDA63A', '#4C9F38', '#C7212F', '#FF3A21',
+    '#26BDE2', '#FCC30B', '#A21942', '#FD6925', '#DD1367',
+    '#FD9D24', '#C9992D', '#3F7E44', '#0A97D9', '#56C02B',
+    '#00689D', '#19486A'
+];
 
 // Calculate the year range (current year - 5 years to current year)
 export function getYearRange(): { minYear: number; maxYear: number } {
@@ -68,6 +78,34 @@ export function getMonthDateRange(monthStr: string): { startDate: Date; endDate:
     const endDate = new Date(parseInt(year), parseInt(month), 0);
     return { startDate, endDate };
 }
+
+// Get the name of a taxonomy from the code
+export function getTaxonomiaName(code: string | null): string {
+    if (!code) return "";
+    const entry = Object.entries(taxonomia_names).find(([, c]) => c === code);
+    return entry ? entry[0] : code;
+}
+
+// Get the minDate and maxDate values, when no filter is selected
+export function getDefaultDateRange(): { minDate: string; maxDate: string } {
+    const { minYear, maxYear } = getYearRange();
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+
+    const maxDate = maxYear === currentYear
+        ? `${String(currentMonth).padStart(2, '0')}-${maxYear}`
+        : `12$-${maxYear}`;
+
+    return { minDate: `01-${minYear}`, maxDate };
+}
+
+export function sortOdsNumerically(odsArray: string[]): string[] {
+    return [...odsArray].sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+        const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+        return numA - numB;
+    });
+};
 
 //2026-06-30T17:31:22.502087+00:00 => 30/06/2026 17:31
 export function formatDateChecked(date: string): string {
@@ -117,14 +155,26 @@ export async function fetchDocumentsData(): Promise<Result[]> {
 
                 Object.entries(data).forEach(([key, value]: [string, any]) => {
                     const odsMapeados: Record<string, string[]> = {};
+                    const odsPercentages: Record<string, Record<string, number>> = {};
                     const taxonomiasDoc: string[] = [];
 
                     const name = value.titulo ? value.titulo : value.curso;
 
                     if (value.ods_mapeados) {
                         Object.entries(value.ods_mapeados).forEach(([taxCode, odsObj]) => {
+                            const odsCounts = odsObj as Record<string, number> | undefined;
                             const odsList = odsObj ? Object.keys(odsObj as object) : [];
                             odsMapeados[taxCode] = odsList;
+
+                            const total = odsList.reduce((sum, ods) => sum + odsCounts![ods], 0);
+
+                            const percentages: Record<string, number> = {};
+                            odsList.forEach(ods => {
+                                percentages[ods] = total > 0
+                                    ? Math.round((odsCounts![ods] / total) * 1000) / 10   // 1 casa decimal
+                                    : 0;
+                            });
+                            odsPercentages[taxCode] = percentages;
 
                             if (odsList.length > 0) {
                                 taxonomiasDoc.push(taxCode);
@@ -141,6 +191,7 @@ export async function fetchDocumentsData(): Promise<Result[]> {
                         origin: value.origem,
                         dateChecked: value.dateChecked,
                         odsMapeados: odsMapeados,
+                        odsPercentages: odsPercentages,
                         taxonomias: taxonomiasDoc,
                     };
                     formattedDocs.push(doc);

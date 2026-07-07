@@ -7,6 +7,7 @@ export interface Result {
     autores?: string;
     dateChecked: string;
     odsMapeados?: Record<string, string[]>;
+    odsPercentages?: Record<string, Record<string, number>>;
     taxonomias?: string[];
 
 }

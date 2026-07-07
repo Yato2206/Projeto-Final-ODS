@@ -12,7 +12,7 @@ const ResultList: React.FC<ResultListProps> = ({data, selectedTax}) => {
     return (
         <div className="result-list">
             {data.map((result) => (
-                <ResultCard result={result}  selectedTax={selectedTax} key={result.id}></ResultCard>
+                <ResultCard result={result} selectedTax={selectedTax} key={result.id}></ResultCard>
             ))}
         </div>
     )

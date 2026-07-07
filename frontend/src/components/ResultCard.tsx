@@ -25,6 +25,24 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, selectedTax }) => {
         ? result.odsMapeados[selectedTax] ?? []
         : [];
 
+    const joinOdsPercentages = (odsList: string[]) => {
+        return odsList.length > 0 ? (
+        odsList.map((ods, index) => {
+            const percentage = selectedTax && result.odsPercentages?.[selectedTax]?.[ods] !== undefined
+                ? result.odsPercentages[selectedTax][ods]
+                : 0;
+
+            return (
+                <span key={ods}>
+                    {ods} ({percentage}%)
+                    {index < odsList.length - 1 ? ', ' : ''}
+                </span>
+            );
+        })
+    ) : (
+        'Nenhuma ODS identificada.'
+    )}
+
     return (
         <div className="result-card">
             <div className="result-card-header">
@@ -56,7 +74,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, selectedTax }) => {
             </div>
 
             <div className="result-card-ods">
-                <strong>ODS:</strong> {odsList.length > 0 ? odsList.join(', ') : 'Nenhuma ODS identificada.'}
+                <strong>ODS:</strong> { joinOdsPercentages(odsList) }
             </div>
             
             <div className="result-card-footer">

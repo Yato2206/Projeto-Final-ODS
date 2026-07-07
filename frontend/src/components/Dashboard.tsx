@@ -11,11 +11,14 @@ import AreaChartComponent from "./PieChart";
 import MonthlyOvertimeChart from "./MonthlyOvertimeChart";
 import YearlyOvertimeChart from "./YearlyOvertimeChart";
 import {
+    getTaxonomiaName,
+    getDefaultDateRange,
     formatDateChecked,
     getOdsForTaxonomia,
     fetchDocumentsData,
-    filterDocuments
+    filterDocuments,
 } from "./Utilis";
+import {Taxonomias} from "../types";
 
 
 function GridItem({ title, children }) {
@@ -35,6 +38,7 @@ export function DashboardScreen() {
     const monthlytimechartRef = useRef();
     const yearlytimechartRef = useRef();
     const piechartRef = useRef();
+    const { minDate: defaultMinDate, maxDate: defaultMaxDate } = getDefaultDateRange();
     const {
         pendingFilters,
         handleMinDateChange,
@@ -311,18 +315,6 @@ export function DashboardScreen() {
                                 <span className="info-label">Total de Documentos:</span>
                                 <span className="info-value">{dashboardData.totalItems}</span>
                             </div>
-                            {dashboardData.filters.minDate && (
-                                <div className="info-card">
-                                    <span className="info-label">Data Inicial:</span>
-                                    <span className="info-value">{dashboardData.filters.minDate}</span>
-                                </div>
-                            )}
-                            {dashboardData.filters.maxDate && (
-                                <div className="info-card">
-                                    <span className="info-label">Data Final:</span>
-                                    <span className="info-value">{dashboardData.filters.maxDate}</span>
-                                </div>
-                            )}
 
                             <button onClick={handleExport}>
                                 Exportar
@@ -341,17 +333,17 @@ export function DashboardScreen() {
                                 <div className="info-grid">
                                     <div className="info-card">
                                         <span className="info-label">Data Inicial:</span>
-                                        <span className="info-value">{dashboardData.filters.minDate}</span>
+                                        <span className="info-value">{dashboardData.filters.minDate || defaultMinDate}</span>
                                     </div>
 
                                     <div className="info-card">
                                         <span className="info-label">Data Final:</span>
-                                        <span className="info-value">{dashboardData.filters.maxDate}</span>
+                                        <span className="info-value">{dashboardData.filters.maxDate || defaultMaxDate}</span>
                                     </div>
 
                                     <div className="info-card">
                                         <span className="info-label">Taxonomia:</span>
-                                        <span className="info-value">{dashboardData.selectedTax}</span>
+                                        <span className="info-value">{getTaxonomiaName(dashboardData.selectedTax)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -361,11 +353,11 @@ export function DashboardScreen() {
                             </button>
 
                             <button onClick={() => handleDownloadSvg(barchartRef, "barChartODS.svg") }>
-                                Download as Svg
+                                Download as SVG
                             </button>
                         </div>
 
-                        { dashboardData.monthlyData.length > 0 && (
+                        { dashboardData.monthlyData.length > 1 && (
                             <div>
                                 <div ref={monthlytimechartRef}>
                                     <GridItem title="Contribuições aos ODS por Mês">
@@ -375,7 +367,7 @@ export function DashboardScreen() {
                                     <div className="info-grid">
                                         <div className="info-card">
                                             <span className="info-label">Taxonomia:</span>
-                                            <span className="info-value">{dashboardData.selectedTax}</span>
+                                            <span className="info-value">{getTaxonomiaName(dashboardData.selectedTax)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -385,7 +377,7 @@ export function DashboardScreen() {
                                 </button>
 
                                 <button onClick={() => handleDownloadSvg(monthlytimechartRef, "monthlyOvertimeChartODS.svg") }>
-                                    Download as Svg
+                                    Download as SVG
                                 </button>
                             </div>
                         )}
@@ -400,7 +392,7 @@ export function DashboardScreen() {
                                     <div className="info-grid">
                                         <div className="info-card">
                                             <span className="info-label">Taxonomia:</span>
-                                            <span className="info-value">{dashboardData.selectedTax}</span>
+                                            <span className="info-value">{getTaxonomiaName(dashboardData.selectedTax)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -410,7 +402,7 @@ export function DashboardScreen() {
                                 </button>
 
                                 <button onClick={() => handleDownloadSvg(yearlytimechartRef, "yearlyOvertimeChartODS.svg") }>
-                                    Download as Svg
+                                    Download as SVG
                                 </button>
                             </div>
                         )}
@@ -424,17 +416,17 @@ export function DashboardScreen() {
                                 <div className="info-grid">
                                     <div className="info-card">
                                         <span className="info-label">Data Inicial:</span>
-                                        <span className="info-value">{dashboardData.filters.minDate}</span>
+                                        <span className="info-value">{dashboardData.filters.minDate || defaultMinDate}</span>
                                     </div>
 
                                     <div className="info-card">
                                         <span className="info-label">Data Final:</span>
-                                        <span className="info-value">{dashboardData.filters.maxDate}</span>
+                                        <span className="info-value">{dashboardData.filters.maxDate || defaultMaxDate}</span>
                                     </div>
 
                                     <div className="info-card">
                                         <span className="info-label">Taxonomia:</span>
-                                        <span className="info-value">{dashboardData.selectedTax}</span>
+                                        <span className="info-value">{getTaxonomiaName(dashboardData.selectedTax)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -444,7 +436,7 @@ export function DashboardScreen() {
                             </button>
 
                             <button onClick={() => handleDownloadSvg(piechartRef, "pieChartODS.svg") }>
-                                Download as Svg
+                                Download as SVG
                             </button>
                         </div>
                     </div>

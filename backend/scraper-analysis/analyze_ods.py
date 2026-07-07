@@ -21,17 +21,29 @@ def preprocessar_texto(texto):
 
     return " ".join(palavras)
 
+def get_taxonomias():
+    taxonomies_dir = os.path.join(BASE_DIR, 'documents', 'taxonomies')
+    filepaths = sorted(glob.glob(os.path.join(taxonomies_dir, 'taxo_*.json')))
+
+    taxonomia_files = {}
+
+    for path in filepaths:
+
+        filename = os.path.basename(path)
+
+        key = filename.replace('taxo_', '').replace('.json', '')
+
+        taxonomia_files[key] = path
+
+    return taxonomia_files
+
 def classificar_ods(titulo, texto_conteudo):
     taxonomias = {}
-    taxonomia_files = {
-        'UoA': os.path.join(BASE_DIR, 'documents', 'taxonomies', 'taxo_UoA.json'),
-        'HK': os.path.join(BASE_DIR, 'documents', 'taxonomies', 'taxo_HK.json')
-    }
+    taxonomia_files = get_taxonomias()
 
     for nome_taxonomia, caminho_arquivo in taxonomia_files.items():
         with open(caminho_arquivo, 'r', encoding='utf-8') as f:
             taxonomias[nome_taxonomia] = json.load(f)
-
 
     texto_completo = f"{titulo} {texto_conteudo}"
     texto_tratado = preprocessar_texto(texto_completo)
@@ -60,7 +72,7 @@ def process_files_and_save(files_pattern, chunk_size=1000):
     output_dir = os.path.join(BASE_DIR, '..', '..', 'frontend', 'public')
     os.makedirs(output_dir, exist_ok=True)
 
-    existing_results, _, _ = load_existing_data_from_files_with_same_prefix(output_dir, "resultados_ods")#load_existing_results(output_dir)
+    existing_results, _, _ = load_existing_data_from_files_with_same_prefix(output_dir, "resultados_ods")
     print(f"Loaded {len(existing_results)} results from output.")
 
     dados_consolidados = dict(existing_results)

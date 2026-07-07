@@ -30,7 +30,7 @@ export type Ods =
 
 export type Origens = "Repositório Científico" | "Newsletter" | "Scopus"
 
-export type Taxonomias = "Universidade de Auckland" | "Universidade de Educação de Hong Kong"
+export type Taxonomias = "Universidade de Auckland" | "Universidade de Educação de Hong Kong" | "Universidade de Monash"
 
 export type PendingFilters = {
     minDate: string;

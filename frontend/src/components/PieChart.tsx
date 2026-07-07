@@ -25,7 +25,7 @@ const renderCustomizedLabel = ({
     outerRadius: number;
     percent: number;
 }) => {
-    if (percent < 0.03) return null;
+    if (percent < 0.035) return null;
 
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
