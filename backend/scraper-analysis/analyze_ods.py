@@ -165,4 +165,4 @@ def process_files_and_save(files_pattern, chunk_size=1000):
             print(f"-> Saved new file: {out_path} ({len(chunk_dict)} items)")
             next_index += 1
 
-process_files_and_save('documents/formatted_docs/documents_formatted_*.json', chunk_size=1000)
+process_files_and_save('documents/filtered_docs/filtered_documents_*.json', chunk_size=1000)
