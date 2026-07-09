@@ -67,22 +67,26 @@ const renderCustomLegend = (sortedOds: string[]) => {
 const YearlyOvertimeChartComponent: React.FC<YearlyOvertimeChartComponentProps> = ({ data, relevantOds }) => {
     const sortedOds = sortOdsNumerically(relevantOds);
 
+    const chartData = data.map(d => {
+        const stackTotal = sortedOds.reduce((sum, ods) => sum + (Number(d[ods]) || 0), 0);
+        return { ...d, labelAnchor: 0.0001, stackTotal: stackTotal };
+    });
+
     return (
         <ResponsiveContainer width="100%" height={500}>
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year"/>
                 <YAxis />
                 <Tooltip content={<CustomTooltip sortedOds={sortedOds} />} wrapperStyle={{ zIndex: 1000 }}/>
                 <Legend content={() => renderCustomLegend(sortedOds)} />
-                {sortedOds.map((ods, index) => {
-                    const isLast = index === sortedOds.length - 1;
-                    return (
-                        <Bar key={ods} dataKey={ods} name={ods} stackId="ods" fill={COLORS[index % COLORS.length]}>
-                            {isLast && <LabelList dataKey="totalCount" position="top" fontWeight="bold" />}
-                        </Bar>
-                    );
-                })}
+                {sortedOds.map((ods, index) => (
+                    <Bar key={ods} dataKey={ods} name={ods} stackId="ods" fill={COLORS[index % COLORS.length]} />
+                ))}
+
+                <Bar dataKey="labelAnchor" stackId="ods" fill="transparent" isAnimationActive={false}>
+                    <LabelList dataKey="stackTotal" position="top" fontWeight="bold" />
+                </Bar>
             </BarChart>
         </ResponsiveContainer>
     );

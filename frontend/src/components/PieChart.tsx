@@ -92,47 +92,56 @@ const PieChartComponent = ({ data }) => {
     }
 
     return (
-        <div className={"chart-container"}>
-            <PieChart width={1000} height={600} >
-                <Pie
-                    data={data}
-                    dataKey="count"
-                    label={renderCustomizedLabel}
-                    labelLine={false}
-                    innerRadius={125}
-                    outerRadius={200}
-                    isAnimationActive={false}
-                >
-                    {data.map((entry, index) => (
-                        <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index]} />
-                    ))}
-                </Pie>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ position: 'relative', width: 650, height: 600 }}>
+                <PieChart width={650} height={600}>
+                    <Pie
+                        data={data}
+                        dataKey="count"
+                        label={renderCustomizedLabel}
+                        labelLine={false}
+                        innerRadius={125}
+                        outerRadius={200}
+                        isAnimationActive={false}
+                    >
+                        {data.map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                        ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 1000 }}/>
+                </PieChart>
 
-                <image
-                    href={odsLogo}
-                    x={200}
-                    y={200}
-                    width={200}
-                    height={200}
-                    preserveAspectRatio="xMidYMid meet"
+                <img
+                    src={odsLogo}
+                    alt="ODS logo"
+                    style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 200,
+                        height: 200,
+                        pointerEvents: 'none',
+                        zIndex: 1,
+                    }}
                 />
+            </div>
 
-                <Tooltip content={<CustomTooltip />} />
-
-                <Legend
-                    layout="vertical"
-                    align="right"
-                    verticalAlign="middle"
-                    fontSize={16}
-                    fontFamily="Inter, sans-serif"
-                    fontWeight="bold"
-                    content={renderCustomLegend(data)}
-                />
-            </PieChart>
-
-
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                gap: '5px',
+            }}>
+                {data.map((entry: any, index: number) => (
+                    <div key={`legend-item-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <div style={{ width: '16px', height: '16px', backgroundColor: COLORS[index % COLORS.length] }} />
+                        <span style={{ color: COLORS[index % COLORS.length] }}>{entry.name}</span>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };

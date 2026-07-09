@@ -96,26 +96,26 @@ export function DashboardScreen() {
 
         itemsWithMonth.forEach(item => {
             try {
-                const itemDate = new Date(item.date);
-                if (isNaN(itemDate.getTime())) {
+                const [yearStr, monthStr] = item.date.split('-');
+                const year = parseInt(yearStr, 10);
+                const monthIndex = parseInt(monthStr, 10) - 1; // 0-based for monthNames lookup
+
+                if (isNaN(year) || isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+                    console.error("Error getting date:", item.date);
                     return;
                 }
 
-                const year = itemDate.getFullYear();
-                const month = String(itemDate.getMonth() + 1).padStart(2, '0');;
+                const month = monthStr.padStart(2, '0');
                 const monthKey = `${year}-${month}`;
 
                 if (!monthlyDataMap[monthKey]) {
                     monthlyDataMap[monthKey] = {
-                        month: `${monthNames[itemDate.getMonth()]} ${year}`,
+                        month: `${monthNames[monthIndex]} ${year}`,
                         date: monthKey,
                         totalCount: 0
                     };
-                    relevantOds.forEach(ods => {
-                        monthlyDataMap[monthKey][ods] = 0
-                    });
+                    relevantOds.forEach(ods => { monthlyDataMap[monthKey][ods] = 0; });
                 }
-
                 monthlyDataMap[monthKey].totalCount++;
 
                 const itemOds = selectedTax && item.odsMapeados ? item.odsMapeados[selectedTax] : undefined;
@@ -136,17 +136,18 @@ export function DashboardScreen() {
             .map(([, v]) => v);
 
 
+        const hasYear = (dateStr: string): boolean => /^\d{4}/.test(dateStr);
+
         // Data for the OverTimeYearlyChart
         const yearlyDataMap: { [yearKey: string]: any } = {};
 
         filtered.forEach(item => {
             try {
-                const itemDate = new Date(item.date);
-                if (isNaN(itemDate.getTime())) {
+                if (!hasYear(item.date)) {
+                    console.error('Error parsing date:', item.date);
                     return;
                 }
-
-                const yearKey = String(itemDate.getFullYear());
+                const yearKey = item.date.slice(0, 4);
 
                 if (!yearlyDataMap[yearKey]) {
                     yearlyDataMap[yearKey] = { year: yearKey, totalCount: 0 };
@@ -196,6 +197,25 @@ export function DashboardScreen() {
     const handleExport = () => {
         const taxonomia = dashboardData?.selectedTax;
 
+        const formatOdsWithPercentages = (item: Result): string => {
+            const odsList = taxonomia && item.odsMapeados
+                ? item.odsMapeados[taxonomia] ?? []
+                : [];
+
+            if (odsList.length === 0) return "";
+
+            return odsList
+                .map(ods => {
+                    const percentage = taxonomia && item.odsPercentages?.[taxonomia]?.[ods] !== undefined
+                        ? item.odsPercentages[taxonomia][ods]
+                        : 0;
+                    return { ods, percentage };
+                })
+                .sort((a, b) => b.percentage - a.percentage) // maior percentagem primeiro
+                .map(({ ods, percentage }) => `${ods} (${percentage}%)`)
+                .join("; ");
+        };
+
         const exportData = filteredData.map(item => ({
             "Link": item.id,
             "Titulo": item.name,
@@ -203,9 +223,7 @@ export function DashboardScreen() {
             "Origem": item.origin,
             "Data": item.date,
             "Verificado": formatDateChecked(item.dateChecked),
-            "ODS": taxonomia && item.odsMapeados?.[taxonomia]
-                ? item.odsMapeados[taxonomia].join("; ")
-                : "",
+            "ODS": formatOdsWithPercentages(item),
         }));
 
         const wb = XLSX.utils.book_new();
@@ -239,7 +257,8 @@ export function DashboardScreen() {
                     "Tipo": item.type,
                     "Origem": item.origin,
                     "Data": item.date,
-                    "Verificado": formatDateChecked(item.dateChecked)
+                    "Verificado": formatDateChecked(item.dateChecked),
+                    "ODS": formatOdsWithPercentages(item),
                 }));
 
                 const odsWs = XLSX.utils.json_to_sheet(exportOds);
@@ -304,6 +323,7 @@ export function DashboardScreen() {
                         : []
                 }
                 buttonLabel="Gerar Dashboard"
+                disabled={pendingFilters.taxonomias.length !== 1}
             />
 
             {dashboardData && (

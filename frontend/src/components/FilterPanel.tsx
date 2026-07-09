@@ -41,6 +41,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     taxonomias,
     availableOds,
     buttonLabel,
+    disabled,
 }) => {
     const [isTypesExpanded, setIsTypesExpanded] = useState(true);
     const [isOdsExpanded, setIsOdsExpanded] = useState(true);
@@ -208,50 +209,6 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                             ))}
                         </div>
                     </div>
-
-                        <div className="filter-group">
-                            <div className="filter-label-with-button">
-                                <label>Tipo:</label>
-                                <div className="type-button-group">
-                                    {isTypesExpanded && (
-                                        <button
-                                            className="select-all-button"
-                                            onClick={handleSelectAllTypes}
-                                        >
-                                            {types.length === availableTypes.length ? "Limpar" : "Selecionar tudo"}
-                                        </button>
-                                    )}
-                                    <label className="container">
-                                        <input
-                                            type="checkbox"
-                                            checked={isTypesExpanded}
-                                            onChange={() => setIsTypesExpanded(!isTypesExpanded)}
-                                        />
-                                        <svg viewBox="0 0 512 512" height="1em" xmlns="http://www.w3.org/2000/svg" className="chevron-down">
-                                            <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
-                                        </svg>
-                                    </label>
-                                </div>
-                            </div>
-
-                            {isTypesExpanded && (
-                                <div className="checkboxes">
-                                    {availableTypes.map(typeOption => (
-                                        <div key={typeOption} className="checkbox-item">
-                                            <input
-                                                id={`type-${typeOption}`}
-                                                type="checkbox"
-                                                value={typeOption}
-                                                checked={types.includes(typeOption)}
-                                                onChange={handleTypeChange}
-                                            />
-                                            <label htmlFor={`type-${typeOption}`}>{typeOption}</label>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
                         <div className="filter-group">
                             <div className="filter-label-with-button">
                                 <label>ODS:</label>
@@ -303,6 +260,49 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
                     <div className="filter-group">
                         <div className="filter-label-with-button">
+                            <label>Tipo:</label>
+                            <div className="type-button-group">
+                                {isTypesExpanded && (
+                                    <button
+                                        className="select-all-button"
+                                        onClick={handleSelectAllTypes}
+                                    >
+                                        {types.length === availableTypes.length ? "Limpar" : "Selecionar tudo"}
+                                    </button>
+                                )}
+                                <label className="container">
+                                    <input
+                                        type="checkbox"
+                                        checked={isTypesExpanded}
+                                        onChange={() => setIsTypesExpanded(!isTypesExpanded)}
+                                    />
+                                    <svg viewBox="0 0 512 512" height="1em" xmlns="http://www.w3.org/2000/svg" className="chevron-down">
+                                        <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+                                    </svg>
+                                </label>
+                            </div>
+                        </div>
+
+                        {isTypesExpanded && (
+                            <div className="checkboxes">
+                                {availableTypes.map(typeOption => (
+                                    <div key={typeOption} className="checkbox-item">
+                                        <input
+                                            id={`type-${typeOption}`}
+                                            type="checkbox"
+                                            value={typeOption}
+                                            checked={types.includes(typeOption)}
+                                            onChange={handleTypeChange}
+                                        />
+                                        <label htmlFor={`type-${typeOption}`}>{typeOption}</label>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="filter-group">
+                        <div className="filter-label-with-button">
                             <label>Origem:</label>
                             <label className="container">
                                 <input
@@ -334,7 +334,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                         )}
                     </div>
 
-                    <button onClick={onApplyFilters} className="apply-button" disabled={taxonomias.length === 0}>
+                    <button onClick={onApplyFilters} className="apply-button" disabled={disabled}>
                         {buttonLabel}
                     </button>
                 </div>

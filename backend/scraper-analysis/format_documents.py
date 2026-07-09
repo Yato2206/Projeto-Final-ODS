@@ -178,7 +178,7 @@ def format_scientific_repo_documents():
                 if tipo in typesAC:
                     formattedTipo = "Artigo Científico"
                 elif tipo in typesE:
-                    formattedTipo = "Educação"
+                    formattedTipo = "Ensino"
                 else:
                     formattedTipo = tipo
 
