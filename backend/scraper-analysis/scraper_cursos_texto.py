@@ -78,15 +78,11 @@ async def main():
         print("No links to scrape")
         return
 
-    force_full = len(sys.argv) > 1 and sys.argv[1].strip().lower() == "true"
-    if force_full:
-        print("Force mode enabled: full scrape from page 0 (ignoring existing items)")
-
     print(f"Found {len(links)} cursos to process\n")
 
     sort_key = "dateChecked"
     # Scrape in parallel
-    await scrape_parallel(OUTPUT_FILE, links, semaphore, sort_key, scrape_cursos, NUM_SCRAPERS, force_full=force_full)
+    await scrape_parallel(OUTPUT_FILE, links, semaphore, sort_key, scrape_cursos, NUM_SCRAPERS, special=True)
 
 if __name__ == "__main__":
     # Ensure documents directory exists

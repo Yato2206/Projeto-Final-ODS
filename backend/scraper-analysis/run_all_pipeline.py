@@ -51,6 +51,7 @@ def main():
         ("py scraper_repo_cientifico.py", "Scientific Repository Scraper"),
         ("py ./apis/scopus_api_scraper.py", "Scopus API Scraper"),
         ("py format_documents.py", "Document Formatter"),
+        ("py eliminate_files.py", "File Eliminator"),
         ("py analyze_ods.py", "ODS Analysis"),
     ]
     

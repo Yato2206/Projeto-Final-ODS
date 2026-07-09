@@ -8,6 +8,7 @@ from time import sleep
 import re
 import glob
 import os
+from datetime import datetime
 
 # Função para carregar dados existentes de um arquivo JSON
 # O parametro output_file é o caminho do arquivo JSON que contém os dados existentes, já que 
@@ -171,13 +172,14 @@ async def _scrape_chunk(session, chunk, existing_data, all_data_shared, semaphor
             print(f"  {prefix} Error scraping {link_info['link']}: {e}")
 
 #Scrape com scrapers a rodar em paralelo
-async def scrape_parallel(output_file, links, semaphore, sort_key, scrape_func, num_scrapers, force_full=False):
+#special é um parâmetro para caso não se queira carregar os ficheiros que já existem
+async def scrape_parallel(output_file, links, semaphore, sort_key, scrape_func, num_scrapers, force_full=False, special=False):
 
     if force_full and Path(output_file).exists():
         Path(output_file).unlink()
         print(f"Removed existing {output_file} before full scrape")
 
-    previous_data = load_existing_data(output_file)
+    previous_data = {} if special else load_existing_data(output_file)
     existing_data = {} if force_full else previous_data
     print(f"Loaded {len(previous_data)} existing items")
 
@@ -229,3 +231,47 @@ def load_existing_data_from_files_with_same_prefix(output_dir, filename_prefix):
             print(f"Warning: could not load '{fpath}': {e}")
 
     return existing_items, done_links, total_count
+
+
+def extract_year(value):
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+    if re.fullmatch(r"\d{4}", value_str):
+        return int(value_str)
+    match = re.match(r"(\d{4})", value_str)
+    if match:
+        return int(match.group(1))
+    return None
+
+# Função para eliminar itens antigos com base na data de publicação
+# No caso dos cursos, elimina com base na data de verificação, já que os cursos não têm data de publicação.
+def eliminate_old(existing_items):
+    current_date = datetime.now()
+    items_check = {}
+    year_diference = 5
+    for url, content in existing_items.items():
+        if 'dataPublicacao' not in content:
+            # Para cursos, verifica a data de verificação
+            data_iso = content['dateChecked'].replace('Z', '+00:00')
+            data_verificacao = datetime.fromisoformat(data_iso).replace(tzinfo=None)
+            months_diff = (current_date.year - data_verificacao.year) * 12 + (current_date.month - data_verificacao.month)
+            max_months = 6
+            #diferença de 6 meses ou menos, mantém o item
+            if 0 <= months_diff <= max_months:
+                items_check[url] = content
+            else:
+                continue
+        else:
+            data_pub = content.get('dataPublicacao')
+            data_pub_year = extract_year(data_pub)
+            if data_pub_year is not None and current_date.year - data_pub_year <= year_diference:
+                items_check[url] = content
+            else:
+                print(f"{current_date.year} - {data_pub_year} > {year_diference} -> Eliminando item antigo: {url}")
+                continue
+    return items_check

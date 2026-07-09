@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-import eliminate_duplicates 
+import eliminate_files 
 
 def test_remove_duplicates_cursos_ignorados_e_mantidos():
     dados_entrada = {
@@ -15,7 +15,7 @@ def test_remove_duplicates_cursos_ignorados_e_mantidos():
         }
     }
     
-    resultado = eliminate_duplicates.remove_duplicates(dados_entrada)
+    resultado = eliminate_files.remove_duplicates(dados_entrada)
     
     assert "https/curso1" in resultado
     assert "https/artigo1" in resultado
@@ -35,7 +35,7 @@ def test_remove_duplicates_substitui_por_data_publicacao_mais_recente():
         }
     }
     
-    resultado = eliminate_duplicates.remove_duplicates(dados_entrada)
+    resultado = eliminate_files.remove_duplicates(dados_entrada)
     
     assert len(resultado) == 1
     assert "https/artigo_novo" in resultado
@@ -55,7 +55,7 @@ def test_remove_duplicates_substitui_por_data_publicacao_mais_recente_versao_dat
         }
     }
     
-    resultado = eliminate_duplicates.remove_duplicates(dados_entrada)
+    resultado = eliminate_files.remove_duplicates(dados_entrada)
     
     assert len(resultado) == 1
     assert "https/artigo_novo" in resultado
@@ -76,7 +76,7 @@ def test_remove_duplicates_mesma_publicacao_substitui_por_date_checked():
         }
     }
     
-    resultado = eliminate_duplicates.remove_duplicates(dados_entrada)
+    resultado = eliminate_files.remove_duplicates(dados_entrada)
     
     assert len(resultado) == 1
     assert "https/checado_depois" in resultado
@@ -96,10 +96,10 @@ def test_remove_duplicates_mantem_primeiro_se_existente_for_mais_recente():
         }
     }
     
-    resultado = eliminate_duplicates.remove_duplicates(dados_entrada)
+    resultado = eliminate_files.remove_duplicates(dados_entrada)
     assert len(resultado) == 1
     assert "https/vencedor" in resultado
 
 def test_remove_duplicates_vazio():
-    resultado = eliminate_duplicates.remove_duplicates({})
+    resultado = eliminate_files.remove_duplicates({})
     assert resultado == {}

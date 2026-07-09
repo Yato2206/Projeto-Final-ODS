@@ -76,17 +76,9 @@ def parse_curso_page(html):
 
     return cursos
 
-def scrape_cursos(force_full=False):
-    """Scrape all cursos pages"""
-    if force_full and Path(OUTPUT_FILE).exists():
-        Path(OUTPUT_FILE).unlink()
-        print(f"Removed existing {OUTPUT_FILE} before full scrape")
-
-    previous_data = load_existing_data(OUTPUT_FILE)
-    existing_data = {} if force_full else previous_data
-    print(f"Loaded {len(existing_data)} existing items")
-
-    all_cursos = {} if force_full else dict(existing_data)
+def scrape_cursos():
+    existing_data = {}
+    all_cursos = {} 
 
     for curso in ["licenciaturas", "mestrados", "pos-graduacoes"]:
         _scrape_sequential(BASE_URL, parse_curso_page, 0, existing_data, all_cursos, MIN_ITEMS_PER_PAGE, curso, prefix=f"[{curso.capitalize()}]")
@@ -101,11 +93,7 @@ def main():
     print(f"Cursos Scraper")
     print(f"{'='*50}\n")
 
-    force_full = len(sys.argv) > 1 and sys.argv[1].strip().lower() == "true"
-    if force_full:
-        print("Force mode enabled: full scrape from page 0 (ignoring existing items)")
-
-    scrape_cursos(force_full=force_full)
+    scrape_cursos()
 
 
 if __name__ == "__main__":

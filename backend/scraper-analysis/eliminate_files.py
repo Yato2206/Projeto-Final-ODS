@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from datetime import datetime
-from utilis import load_existing_data_from_files_with_same_prefix
+from utilis import load_existing_data_from_files_with_same_prefix, eliminate_old
 
 BASE_INPUT_PATH = Path("documents/formatted_docs/")
 
@@ -47,7 +47,8 @@ def remove_duplicates(existing_items):
 def main():
     BASE_INPUT_PATH.mkdir(parents=True, exist_ok=True)
     existing_items, _, _ = load_existing_data_from_files_with_same_prefix(BASE_INPUT_PATH, "documents_formatted_")
-    resultado_final = remove_duplicates(existing_items)
+    not_dup = remove_duplicates(existing_items)
+    resultado_final = eliminate_old(not_dup)
     items_finais = list(resultado_final.items())
     tamanho_bloco = 1000
     output_path =  Path("documents/filtered_docs/")
