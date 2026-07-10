@@ -1,0 +1,14 @@
+"https://www.ipl.pt/estudar/cursos/mestrados/engenharia-quimica-e-biologica": {
+        "curso": "Engenharia Química e Biológica",
+        "autores": "ISEL",
+        "texto": "São objetivos gerais do curso, nas áreas de especialização em processo químicos e em bioprocesso, proporcionar os conhecimentos e capacidade de compreensão a um nível que:\nalicerçando-se nos conhecimentos obtidos ou adquiridos, os desenvolva e aprofunde, permitindo e constituindo a base para o desenvolvimento de competências ao nível da conceção e/ou otimização e/ou integração de processos na área da engenharia química e biológica;\npermita aplicar os conhecimentos, a capacidade de compreensão e de resolução de problemas, em situações novas e não familiares, em contextos alargados e multidisciplinares;\ndesenvolva a capacidade de comunicar conclusões, conhecimentos e raciocínios a elas subjacentes, quer a especialistas, quer a não especialistas, de uma forma clara e sem ambiguidades;\nforneça as competências que permitam uma aprendizagem ao longo da vida, de um modo fundamentalmente auto-orientado e autónomo.\nConsultar\nacreditação",
+        "tipo": "Mestrado",
+        "dateChecked": "2026-07-04T20:45:19.013549",
+        "origem": "ISEL",
+        "ods_mapeados": {
+            "UoA": {
+                "ODS 4 - Educação de Qualidade": 2
+            },
+            "HK": {}
+        }
+    }
