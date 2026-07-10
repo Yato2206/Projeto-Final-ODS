@@ -122,7 +122,6 @@ def extrair_indice(caminho):
     m = re.search(r'_(\d+)\.json$', os.path.basename(caminho))
     return int(m.group(1)) if m else -1
 
-"""
 def process_files_and_save(files_pattern, chunk_size=1000):
     output_dir = Path(__file__).parent.parent.parent / 'frontend' / 'public'
     #output_dir = os.path.join(BASE_DIR, '..', '..', 'frontend', 'public')
@@ -221,109 +220,6 @@ def process_files_and_save(files_pattern, chunk_size=1000):
             os.replace(tmp_path, out_path)
             print(f"-> Saved new file: {out_path} ({len(chunk_dict)} items)")
             next_index += 1
-
-process_files_and_save('documents/filtered_docs/filtered_documents_*.json', chunk_size=1000)
-"""
-def process_files_and_save(files_pattern, chunk_size=1000):
-    output_dir = Path(__file__).parent.parent.parent / 'frontend' / 'public'
-    #output_dir = os.path.join(BASE_DIR, '..', '..', 'frontend', 'public')
-    os.makedirs(output_dir, exist_ok=True)
-
-    existing_results, _, _ = load_existing_data_from_files_with_same_prefix(output_dir, "resultados_ods")
-    print(f"Loaded {len(existing_results)} results from output.")
-
-    dados_consolidados = dict(existing_results)
-
-    ficheiros_entrada = sorted(glob.glob(files_pattern))
-    print(f"Found {len(ficheiros_entrada)} files matching pattern: {files_pattern}")
-
-    if not ficheiros_entrada:
-        print(f"No files found with pattern: {files_pattern}")
-        return
-
-    print(f"Files found: {ficheiros_entrada}")
-
-    for caminho_ficheiro in ficheiros_entrada:
-        print(f"A ler e a analisar: {os.path.basename(caminho_ficheiro)}...")
-
-        with open(caminho_ficheiro, 'r', encoding='utf-8') as f:
-            dados_ficheiro = json.load(f)
-
-        for url, info in dados_ficheiro.items():
-
-            if url in dados_consolidados:
-                continue
-
-            titulo = info.get("titulo", "")
-            if not titulo:
-                titulo = info.get("curso", "")
-            texto_conteudo = info.get("texto", "")
-
-            print(f"A analisar {url}")
-            ods_mapeados = classificar_ods(titulo, texto_conteudo)
-
-            item_resultado = info.copy()
-            item_resultado["ods_mapeados"] = ods_mapeados
-            dados_consolidados[url] = item_resultado
-
-    new_items = [(u, v) for u, v in dados_consolidados.items() if u not in existing_results]
-    total_new = len(new_items)
-    print(f"New items to add: {total_new}")
-
-    existing_files = sorted(glob.glob(os.path.join(output_dir, 'resultados_ods_*.json')), key = extrair_indice)
-    last_index = 0
-    last_path = None
-    last_data = {}
-
-    if existing_files:
-        last_path = existing_files[-1]
-        try:
-            last_index = int(os.path.splitext(os.path.basename(last_path))[0].split('_')[-1])
-        except Exception:
-            last_index = len(existing_files)
-        try:
-            with open(last_path, 'r', encoding='utf-8') as f:
-                last_data = json.load(f) or {}
-        except Exception as e:
-            print(f"Warning: could not load last results file {last_path}: {e}")
-            last_data = {}
-
-    if last_index == 0:
-        next_index = 1
-    else:
-        next_index = last_index + 1
-
-    written_count = 0
-    if last_path and isinstance(last_data, dict):
-        space = chunk_size - len(last_data)
-        if space > 0 and total_new > 0:
-            to_take = min(space, total_new)
-
-            for i in range(to_take):
-                url, item = new_items[i]
-                last_data[url] = item
-                written_count += 1
-
-            tmp_last = last_path + '.tmp'
-            with open(tmp_last, 'w', encoding='utf-8') as f_out:
-                json.dump(last_data, f_out, indent=2, ensure_ascii=False)
-            os.replace(tmp_last, last_path)
-            print(f"-> Added {to_take} items to existing file: {last_path}")
-
-    remaining = new_items[written_count:]
-    if remaining:
-        for i in range(0, len(remaining), chunk_size):
-            chunk_slice = remaining[i:i + chunk_size]
-            chunk_dict = {u: v for u, v in chunk_slice}
-            out_path = os.path.join(output_dir, f"resultados_ods_{next_index}.json")
-            tmp_path = out_path + '.tmp'
-            with open(tmp_path, 'w', encoding='utf-8') as f_out:
-                json.dump(chunk_dict, f_out, indent=2, ensure_ascii=False)
-            os.replace(tmp_path, out_path)
-            print(f"-> Saved new file: {out_path} ({len(chunk_dict)} items)")
-            next_index += 1
-
-#diagnosticar()
 
 print(Path(__file__).parent.parent.parent / 'frontend' / 'public')
 existing_results, _, _ = load_existing_data_from_files_with_same_prefix(Path(__file__).parent.parent.parent / 'frontend' / 'public', "resultados_ods")  # Load existing results

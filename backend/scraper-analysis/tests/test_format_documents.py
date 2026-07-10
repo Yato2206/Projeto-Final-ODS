@@ -195,6 +195,138 @@ def test_format_scientific_repo_documents_skip_no_text():
         resultado = formatDocuments.format_scientific_repo_documents()
     assert len(resultado) == 0
 
+def test_format_orcid():
+    conteudo_mock = {
+        "Titulo Teste": {
+            "titulo": "Titulo Teste",
+            "link": "https://orcid.org/test",
+            "autores": "Autor 1, Autor 2",
+            "texto": "Texto do documento.",
+            "dataPublicacao": "2026-01-01",
+            "tipo": "funding",
+            "dateChecked": "2026-06-28T20:26:53.108757",
+            "origem": "Orcid"
+        }
+    }
+
+    mock_file = MagicMock(spec=Path)
+    mock_file.name = "docente_1.json"
+
+    mock_orcid_dir = MagicMock(spec=Path)
+    mock_orcid_dir.exists.return_value = True
+    mock_orcid_dir.glob.return_value = [mock_file]
+
+    with patch("format_documents.DOCUMENTS_DIR") as mock_documents_dir, \
+         patch("builtins.open", mock_open(read_data="{}")), \
+         patch("format_documents.json.load", return_value=conteudo_mock):
+        mock_documents_dir.__truediv__.return_value = mock_orcid_dir
+        resultado = formatDocuments.format_orcid()
+
+    assert len(resultado) == 1
+    assert "Titulo Teste" in resultado
+    assert resultado["Titulo Teste"]["titulo"] == "Titulo Teste"
+    assert resultado["Titulo Teste"]["link"] == "https://orcid.org/test"
+    assert resultado["Titulo Teste"]["autores"] == "Autor 1, Autor 2"
+    assert resultado["Titulo Teste"]["texto"] == "Texto do documento."
+    assert resultado["Titulo Teste"]["dataPublicacao"] == "2026-01-01"
+    assert resultado["Titulo Teste"]["tipo"] == "funding"
+    assert resultado["Titulo Teste"]["dateChecked"] == "2026-06-28T20:26:53.108757"
+    assert resultado["Titulo Teste"]["origem"] == "Orcid"
+
+def test_format_orcid_directory_not_found():
+    mock_orcid_dir = MagicMock(spec=Path)
+    mock_orcid_dir.exists.return_value = False
+
+    with patch("format_documents.DOCUMENTS_DIR") as mock_documents_dir:
+        mock_documents_dir.__truediv__.return_value = mock_orcid_dir
+        resultado = formatDocuments.format_orcid()
+
+    assert resultado == {}
+
+def test_format_orcid_no_files_found():
+    mock_orcid_dir = MagicMock(spec=Path)
+    mock_orcid_dir.exists.return_value = True
+    mock_orcid_dir.glob.return_value = []
+
+    with patch("format_documents.DOCUMENTS_DIR") as mock_documents_dir:
+        mock_documents_dir.__truediv__.return_value = mock_orcid_dir
+        resultado = formatDocuments.format_orcid()
+
+    assert resultado == {}
+
+def test_format_orcid_skip_non_dict_entries():
+    conteudo_mock = {
+        "Titulo Valido": {
+            "titulo": "Titulo Valido",
+            "autores": "Autor 1"
+        },
+        "Entrada Invalida": "isto nao e um dict"
+    }
+
+    mock_file = MagicMock(spec=Path)
+    mock_file.name = "docente_1.json"
+
+    mock_orcid_dir = MagicMock(spec=Path)
+    mock_orcid_dir.exists.return_value = True
+    mock_orcid_dir.glob.return_value = [mock_file]
+
+    with patch("format_documents.DOCUMENTS_DIR") as mock_documents_dir, \
+         patch("builtins.open", mock_open(read_data="{}")), \
+         patch("format_documents.json.load", return_value=conteudo_mock):
+        mock_documents_dir.__truediv__.return_value = mock_orcid_dir
+        resultado = formatDocuments.format_orcid()
+
+    assert len(resultado) == 1
+    assert "Titulo Valido" in resultado
+    assert "Entrada Invalida" not in resultado
+
+def test_format_orcid_skip_empty_titulo():
+    conteudo_mock = {
+        "Chave Qualquer": {
+            "titulo": "",
+            "autores": "Autor 1"
+        }
+    }
+
+    mock_file = MagicMock(spec=Path)
+    mock_file.name = "docente_1.json"
+
+    mock_orcid_dir = MagicMock(spec=Path)
+    mock_orcid_dir.exists.return_value = True
+    mock_orcid_dir.glob.return_value = [mock_file]
+
+    with patch("format_documents.DOCUMENTS_DIR") as mock_documents_dir, \
+         patch("builtins.open", mock_open(read_data="{}")), \
+         patch("format_documents.json.load", return_value=conteudo_mock):
+        mock_documents_dir.__truediv__.return_value = mock_orcid_dir
+        resultado = formatDocuments.format_orcid()
+
+    assert len(resultado) == 0
+
+def test_format_orcid_fallback_titulo_to_key():
+    conteudo_mock = {
+        "Chave Como Titulo": {
+            "autores": "Autor 1"
+        }
+    }
+
+    mock_file = MagicMock(spec=Path)
+    mock_file.name = "docente_1.json"
+
+    mock_orcid_dir = MagicMock(spec=Path)
+    mock_orcid_dir.exists.return_value = True
+    mock_orcid_dir.glob.return_value = [mock_file]
+
+    with patch("format_documents.DOCUMENTS_DIR") as mock_documents_dir, \
+         patch("builtins.open", mock_open(read_data="{}")), \
+         patch("format_documents.json.load", return_value=conteudo_mock):
+        mock_documents_dir.__truediv__.return_value = mock_orcid_dir
+        resultado = formatDocuments.format_orcid()
+
+    assert len(resultado) == 1
+    assert "Chave Como Titulo" in resultado
+    assert resultado["Chave Como Titulo"]["titulo"] == "Chave Como Titulo"
+
 def test_merge_and_save():
     newsletter_docs = {
         "https://www.ipl.pt/newsletter/test": {
@@ -229,6 +361,17 @@ def test_merge_and_save():
             "origem": "Scopus"
         }
     }
+    orcid_docs = {
+        "Something": {
+            "titulo": "Orcid Test",
+            "autores": "Autor X, Autor Y",
+            "texto": "Texto que descreve o documento Orcid.",
+            "dataPublicacao": "2026-06-06",
+            "tipo": "tipo Teste",
+            "dateChecked": "2026-06-28T20:26:53.108757",
+            "origem": "Orcid"
+        }
+    }
     cursos_docs = {
         "https://www.ipl.pt/cursos/test": {
             "curso": "Cursos Test",
@@ -239,11 +382,11 @@ def test_merge_and_save():
             "origem": "ISEL"
         }
     }
-    conteudo_mock = {**newsletter_docs, **scientific_repo_docs, **scopus_docs, **cursos_docs}
+    conteudo_mock = {**newsletter_docs, **scientific_repo_docs, **scopus_docs, **orcid_docs, **cursos_docs}
     with patch("builtins.open", mock_open()) as mock_file, \
          patch("pathlib.Path.mkdir", return_value=None):
-            resultado = formatDocuments.merge_and_save(newsletter_docs, scientific_repo_docs, scopus_docs, cursos_docs)
-    assert len(resultado) == 4
+            resultado = formatDocuments.merge_and_save(newsletter_docs, scientific_repo_docs, scopus_docs, orcid_docs, cursos_docs)
+    assert len(resultado) == 5
 
 def test_parse_args_com_diretorias_extra():
     argumentos_falsos = [

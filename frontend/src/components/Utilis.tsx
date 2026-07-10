@@ -34,7 +34,7 @@ export const availableOds: Ods[] = [
     "ODS 17 - Parcerias para a Implementação dos Objetivos"
 ];
 
-export const availableOrigens: Origens[] = ["Repositório Científico", "Newsletter", "Scopus"];
+export const availableOrigens: Origens[] = ["Repositório Científico", "Newsletter", "Scopus", "Orcid"];
 
 export const availableTaxonomias: Taxonomias[] = [
     "Universidade de Auckland",
@@ -193,6 +193,7 @@ export async function fetchDocumentsData(): Promise<Result[]> {
                         odsMapeados: odsMapeados,
                         odsPercentages: odsPercentages,
                         taxonomias: taxonomiasDoc,
+                        link: value.link || key,
                     };
                     formattedDocs.push(doc);
                 });

@@ -28,7 +28,7 @@ export type Ods =
     "ODS 16 - Paz, Justiça e Instituições Eficazes" |
     "ODS 17 - Parcerias para a Implementação dos Objetivos"
 
-export type Origens = "Repositório Científico" | "Newsletter" | "Scopus"
+export type Origens = "Repositório Científico" | "Newsletter" | "Scopus" | "Orcid"
 
 export type Taxonomias = "Universidade de Auckland" | "Universidade de Educação de Hong Kong" | "Universidade de Monash"
 

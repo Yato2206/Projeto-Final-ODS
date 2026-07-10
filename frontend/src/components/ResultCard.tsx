@@ -78,7 +78,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, selectedTax }) => {
             </div>
             
             <div className="result-card-footer">
-                <a href={String(result.id)} target="_blank" rel="noopener noreferrer" className="result-card-link">Ver mais</a>
+                <a href={String(result.link)} target="_blank" rel="noopener noreferrer" className="result-card-link">Ver mais</a>
             </div>
         </div>
     );

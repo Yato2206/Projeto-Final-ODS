@@ -50,6 +50,7 @@ def main():
         ("py scraper_newsletter_each.py", "Newsletter Content Scraper"),
         ("py scraper_repo_cientifico.py", "Scientific Repository Scraper"),
         ("py ./apis/scopus_api_scraper.py", "Scopus API Scraper"),
+        ("py ./apis/orcid_api_scraper.py", "Orcid API Scraper"),
         ("py format_documents.py", "Document Formatter"),
         ("py eliminate_files.py", "File Eliminator"),
         ("py analyze_ods.py", "ODS Analysis"),

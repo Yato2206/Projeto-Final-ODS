@@ -205,6 +205,62 @@ def format_scientific_repo_documents():
     print(f"Formatted {total_items} scientific repository items")
     return formatted_docs
 
+def format_orcid():
+    print("\n" + "="*60)
+    print("FORMATTING ORCID DOCUMENTS")
+    print("="*60)
+
+    orcid_dir = DOCUMENTS_DIR / "docentes"
+    formatted_docs = {}
+
+    if not orcid_dir.exists():
+        print(f"Directory not found: {orcid_dir}")
+        return formatted_docs
+
+    orcid_files = sorted(orcid_dir.glob("*.json"))
+    if not orcid_files:
+        print(f"No JSON files found in: {orcid_dir}")
+        return formatted_docs
+
+    total_items = 0
+
+    for orcid_file in orcid_files:
+        try:
+            with open(orcid_file, "r", encoding="utf-8") as f:
+                documents = json.load(f)
+
+            file_items = 0
+            for title_key, doc in documents.items():
+                if not isinstance(doc, dict):
+                    continue
+
+                titulo = doc.get("titulo", title_key)
+                link = doc.get("link", "")
+
+                if not titulo:
+                    continue
+
+                formatted_docs[titulo] = {
+                    "titulo": titulo,
+                    "link": link,
+                    "autores": doc.get("autores", ""),
+                    "texto": doc.get("texto", ""),
+                    "dataPublicacao": doc.get("dataPublicacao", ""),
+                    "tipo": doc.get("tipo", ""),
+                    "dateChecked": doc.get("dateChecked", datetime.now().isoformat()),
+                    "origem": doc.get("origem", "Orcid")
+                }
+                total_items += 1
+                file_items += 1
+
+            print(f"{orcid_file.name}: {file_items} items")
+
+        except Exception as e:
+            print(f"Error processing {orcid_file}: {e}")
+
+    print(f"Formatted {total_items} ORCID items")
+    return formatted_docs
+
 def format_cursos():
 
     print("\n" + "="*60)
@@ -248,13 +304,13 @@ def format_cursos():
     return formatted_cursos
 
 
-def merge_and_save(newsletter_docs, repo_docs, api_docs, cursos, chunk_size=1000):
+def merge_and_save(newsletter_docs, repo_docs, scopus_docs, orcid_docs, cursos, chunk_size=1000):
 
     print("\n" + "="*60)
     print("MERGING AND SAVING")
     print("="*60)
 
-    all_docs = {**newsletter_docs, **repo_docs, **api_docs, **cursos}
+    all_docs = {**newsletter_docs, **repo_docs, **scopus_docs, **orcid_docs, **cursos}
 
     items = list(all_docs.items())
     total_files = 0
@@ -300,16 +356,18 @@ def main():
     # Format documents from each source
     newsletter_docs = format_newsletter_documents()
     repo_docs = format_scientific_repo_documents()
-    api_docs = load_formatted_documents_from_directory(DOCUMENTS_DIR / "scopus", "Scopus")
+    scopus_docs = load_formatted_documents_from_directory(DOCUMENTS_DIR / "scopus", "Scopus")
+    orcid_docs = format_orcid()
     cursos = format_cursos()
-    all_docs = merge_and_save(newsletter_docs, repo_docs, api_docs, cursos)
+    all_docs = merge_and_save(newsletter_docs, repo_docs, scopus_docs, orcid_docs, cursos)
 
     print("\n" + "="*60)
     print(f"FORMATTING COMPLETE!")
     print(f"Total documents: {len(all_docs)}")
     print(f"  - Newsletter items: {len(newsletter_docs)}")
     print(f"  - Scientific Repository items: {len(repo_docs)}")
-    print(f"  - Scopus API items: {len(api_docs)}")
+    print(f"  - Scopus API items: {len(scopus_docs)}")
+    print(f"  - Orcid API items: {len(orcid_docs)}")
     print(f"  - Cursos items: {len(cursos)}")
     print(f"{'='*60}\n")
 
