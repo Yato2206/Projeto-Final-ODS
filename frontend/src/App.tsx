@@ -4,6 +4,7 @@ import {createBrowserRouter, RouterProvider} from "react-router";
 import {SearchBar} from "./components/SearchBar";
 import {Home} from "./components/Home";
 import {DashboardScreen} from "./components/Dashboard";
+import {HomeScreen} from "./components/HomeScreen";
 
 const router = createBrowserRouter([
     {
@@ -12,7 +13,7 @@ const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                element: <DashboardScreen/>,
+                element: <HomeScreen/>,
             },
             {
                 path:"/dashboard",
