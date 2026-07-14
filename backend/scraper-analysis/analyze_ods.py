@@ -70,7 +70,8 @@ def _e_limite_de_palavra(texto, pos):
     return not _PADRAO_LIMITE.match(texto[pos])
 
 def get_taxonomias():
-    taxonomies_dir = os.path.join(BASE_DIR, 'documents', 'taxonomies')
+    taxonomies_dir = os.path.join(BASE_DIR, 'taxonomies')
+    os.makedirs(taxonomies_dir, exist_ok=True)
     filepaths = sorted(glob.glob(os.path.join(taxonomies_dir, 'taxo_*.json')))
 
     taxonomia_files = {}
