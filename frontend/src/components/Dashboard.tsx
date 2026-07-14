@@ -23,7 +23,12 @@ import {Taxonomias} from "../types";
 
 function GridItem({ title, children }) {
     return (
-        <div className="gridItem">
+        <div className="gridItem"
+             style={{
+                 fontFamily: 'Inter, sans-serif',
+                 fontSize: '14px',
+                 fontWeight: 'bold',
+             }}>
             <h3>{title}</h3>
             {children}
         </div>
@@ -328,16 +333,34 @@ export function DashboardScreen() {
 
             {dashboardData && (
                 <div className="dashboard-content">
-                    <div className="dashboard-info">
+                    <div className="dashboard-info"
+                         style={{
+                             fontFamily: 'Inter, sans-serif',
+                             fontSize: '14px',
+                             fontWeight: 'bold',
+                         }}>
                         <h2>Resultados</h2>
                         <div className="info-grid">
                             <div className="info-card">
-                                <span className="info-label">Total de Documentos:</span>
-                                <span className="info-value">{dashboardData.totalItems}</span>
+                                <span className="info-label"
+                                     style={{
+                                        fontFamily: 'Inter, sans-serif',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                     }}>
+                                    Total de Documentos:
+                                </span>
+                                <span className="info-value"
+                                      style={{
+                                          fontFamily: 'Inter, sans-serif',
+                                          fontSize: '14px',
+                                          fontWeight: 'bold',
+                                      }}>
+                                    {dashboardData.totalItems}</span>
                             </div>
 
-                            <button onClick={handleExport}>
-                                Exportar
+                            <button onClick={handleExport} className="button">
+                                Exportar como Excel
                             </button>
                         </div>
                     </div>
@@ -346,34 +369,72 @@ export function DashboardScreen() {
                     <div className="dashboard-results">
                         <div>
                             <div ref={barchartRef}>
-                                <GridItem title="Contribuições aos ODS">
+                                <GridItem title="Contribuições aos ODS" >
                                     <BarChartComponent data={dashboardData.chartData}/>
                                 </GridItem>
 
                                 <div className="info-grid">
                                     <div className="info-card">
-                                        <span className="info-label">Data Inicial:</span>
-                                        <span className="info-value">{dashboardData.filters.minDate || defaultMinDate}</span>
+                                        <span className="info-label"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}>
+                                            Data Inicial:</span>
+
+                                        <span className="info-value"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >{dashboardData.filters.minDate || defaultMinDate}</span>
                                     </div>
 
                                     <div className="info-card">
-                                        <span className="info-label">Data Final:</span>
-                                        <span className="info-value">{dashboardData.filters.maxDate || defaultMaxDate}</span>
+                                        <span className="info-label"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >Data Final:</span>
+
+                                        <span className="info-value"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >{dashboardData.filters.maxDate || defaultMaxDate}</span>
                                     </div>
 
                                     <div className="info-card">
-                                        <span className="info-label">Taxonomia:</span>
-                                        <span className="info-value">{getTaxonomiaName(dashboardData.selectedTax)}</span>
+                                        <span className="info-label"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >Taxonomia:</span>
+                                        <span className="info-value"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >{getTaxonomiaName(dashboardData.selectedTax)}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <button onClick={() => handleDownloadPng(barchartRef, "barChartODS.png") }>
-                                Download as PNG
+                            <button onClick={() => handleDownloadPng(barchartRef, "barChartODS.png") } className="button">
+                                Download como PNG
                             </button>
 
-                            <button onClick={() => handleDownloadSvg(barchartRef, "barChartODS.svg") }>
-                                Download as SVG
+                            <button onClick={() => handleDownloadSvg(barchartRef, "barChartODS.svg") } className="button">
+                                Download como SVG
                             </button>
                         </div>
 
@@ -386,18 +447,31 @@ export function DashboardScreen() {
 
                                     <div className="info-grid">
                                         <div className="info-card">
-                                            <span className="info-label">Taxonomia:</span>
-                                            <span className="info-value">{getTaxonomiaName(dashboardData.selectedTax)}</span>
+                                            <span className="info-label"
+                                                  style={{
+                                                      fontFamily: 'Inter, sans-serif',
+                                                      fontSize: '14px',
+                                                      fontWeight: 'bold',
+                                                  }}
+                                            >Taxonomia:</span>
+
+                                            <span className="info-value"
+                                                  style={{
+                                                      fontFamily: 'Inter, sans-serif',
+                                                      fontSize: '14px',
+                                                      fontWeight: 'bold',
+                                                  }}
+                                            >{getTaxonomiaName(dashboardData.selectedTax)}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <button onClick={() => handleDownloadPng(monthlytimechartRef, "monthlyOvertimeChartODS.png") }>
-                                    Download as PNG
+                                <button onClick={() => handleDownloadPng(monthlytimechartRef, "monthlyOvertimeChartODS.png") } className="button">
+                                    Download como PNG
                                 </button>
 
-                                <button onClick={() => handleDownloadSvg(monthlytimechartRef, "monthlyOvertimeChartODS.svg") }>
-                                    Download as SVG
+                                <button onClick={() => handleDownloadSvg(monthlytimechartRef, "monthlyOvertimeChartODS.svg") } className="button">
+                                    Download como SVG
                                 </button>
                             </div>
                         )}
@@ -411,18 +485,31 @@ export function DashboardScreen() {
 
                                     <div className="info-grid">
                                         <div className="info-card">
-                                            <span className="info-label">Taxonomia:</span>
-                                            <span className="info-value">{getTaxonomiaName(dashboardData.selectedTax)}</span>
+                                            <span className="info-label"
+                                                  style={{
+                                                      fontFamily: 'Inter, sans-serif',
+                                                      fontSize: '14px',
+                                                      fontWeight: 'bold',
+                                                  }}
+                                            >Taxonomia:</span>
+
+                                            <span className="info-value"
+                                                  style={{
+                                                      fontFamily: 'Inter, sans-serif',
+                                                      fontSize: '14px',
+                                                      fontWeight: 'bold',
+                                                  }}
+                                            >{getTaxonomiaName(dashboardData.selectedTax)}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <button onClick={() => handleDownloadPng(yearlytimechartRef, "yearlyOvertimeChartODS.png") }>
-                                    Download as PNG
+                                <button onClick={() => handleDownloadPng(yearlytimechartRef, "yearlyOvertimeChartODS.png") } className="button">
+                                    Download como PNG
                                 </button>
 
-                                <button onClick={() => handleDownloadSvg(yearlytimechartRef, "yearlyOvertimeChartODS.svg") }>
-                                    Download as SVG
+                                <button onClick={() => handleDownloadSvg(yearlytimechartRef, "yearlyOvertimeChartODS.svg") } className="button">
+                                    Download como SVG
                                 </button>
                             </div>
                         )}
@@ -435,27 +522,63 @@ export function DashboardScreen() {
 
                                 <div className="info-grid">
                                     <div className="info-card">
-                                        <span className="info-label">Data Inicial:</span>
-                                        <span className="info-value">{dashboardData.filters.minDate || defaultMinDate}</span>
+                                        <span className="info-label"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >Data Inicial:</span>
+                                        <span className="info-value"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >{dashboardData.filters.minDate || defaultMinDate}</span>
                                     </div>
 
                                     <div className="info-card">
-                                        <span className="info-label">Data Final:</span>
-                                        <span className="info-value">{dashboardData.filters.maxDate || defaultMaxDate}</span>
+                                        <span className="info-label"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >Data Final:</span>
+                                        <span className="info-value"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >{dashboardData.filters.maxDate || defaultMaxDate}</span>
                                     </div>
 
                                     <div className="info-card">
-                                        <span className="info-label">Taxonomia:</span>
-                                        <span className="info-value">{getTaxonomiaName(dashboardData.selectedTax)}</span>
+                                        <span className="info-label"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >Taxonomia:</span>
+                                        <span className="info-value"
+                                              style={{
+                                                  fontFamily: 'Inter, sans-serif',
+                                                  fontSize: '14px',
+                                                  fontWeight: 'bold',
+                                              }}
+                                        >{getTaxonomiaName(dashboardData.selectedTax)}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <button onClick={() => handleDownloadPng(piechartRef, "pieChartODS.png") }>
+                            <button onClick={() => handleDownloadPng(piechartRef, "pieChartODS.png") } className="button">
                                 Download as PNG
                             </button>
 
-                            <button onClick={() => handleDownloadSvg(piechartRef, "pieChartODS.svg") }>
+                            <button onClick={() => handleDownloadSvg(piechartRef, "pieChartODS.svg") } className="button" >
                                 Download as SVG
                             </button>
                         </div>
