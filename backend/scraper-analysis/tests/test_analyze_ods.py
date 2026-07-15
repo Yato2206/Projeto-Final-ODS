@@ -70,7 +70,7 @@ def test_preprocessar_texto_parametrizado(texto, esperado_contem):
 ])
 def test_classificar_ods(monkeypatch, tmp_path, texto_simulado, esperado_uoa, esperado_hk):
     monkeypatch.setattr(analyze_ods, "BASE_DIR", str(tmp_path))
-    taxo_dir = tmp_path / "documents" / "taxonomies"
+    taxo_dir = tmp_path / "taxonomies"
     taxo_dir.mkdir(parents=True, exist_ok=True)
 
     taxo_uoa_data = {
@@ -95,7 +95,7 @@ def test_classificar_ods(monkeypatch, tmp_path, texto_simulado, esperado_uoa, es
 
 def test_classificar_ods_match_palavra_exata(monkeypatch, tmp_path):
     monkeypatch.setattr(analyze_ods, "BASE_DIR", str(tmp_path))
-    taxo_dir = tmp_path / "documents" / "taxonomies"
+    taxo_dir = tmp_path / "taxonomies"
     taxo_dir.mkdir(parents=True, exist_ok=True)
 
     (taxo_dir / "taxo_UoA.json").write_text(json.dumps({"ODS13": ["clima"]}), encoding="utf-8")
